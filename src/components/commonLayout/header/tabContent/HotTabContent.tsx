@@ -1,7 +1,7 @@
 const HotTabCOntent = () => {
   return (
    <div>
-   
+   cdx
    </div>
   );
 };
