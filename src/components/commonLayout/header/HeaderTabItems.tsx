@@ -56,14 +56,12 @@ const HeaderTabItems = () => {
     >
       {/* Scrollable Tabs List */}
       <div className="relative mb-4">
-        <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
         
         <ScrollArea 
           ref={scrollAreaRef}
           className="w-full whitespace-nowrap rounded-md px-4"
         >
-          <TabsList className="inline-flex h-10 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground gap-2 min-w-full">
+          <TabsList className="inline-flex h-10 items-center justify-center  bg-muted p-1 text-muted-foreground gap-2 min-w-full">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (

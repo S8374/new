@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
@@ -7,6 +8,7 @@ import { Navigation } from "swiper/modules";
 
 import "swiper/css";
 import "swiper/css/navigation";
+import { Button } from "../ui/button";
 
 interface CardSliderItem {
     id: string | number;
@@ -59,14 +61,14 @@ export default function CardSlider({
                     </div>
 
                     <div className="flex gap-2">
-                        <button
+                        <Button
                             onClick={() => swiper?.slidePrev()}
                             disabled={!swiper || isBeginning}
                             className={`w-8 h-8 flex items-center justify-center text-foreground
                 ${isBeginning ? "opacity-40 cursor-not-allowed" : "hover:bg-black/30"}`}
                         >
                             ‹
-                        </button>
+                        </Button>
 
                         <button
                             onClick={() => swiper?.slideNext()}

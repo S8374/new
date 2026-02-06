@@ -8,7 +8,7 @@ export default function CommonLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-dvh flex justify-center bg-background">
+    <div className="min-h-dvh flex justify-center bg-[#3B393A]">
       {/* App Container */}
       <div className="w-full max-w-lg flex flex-col min-h-dvh">
         

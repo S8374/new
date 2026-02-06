@@ -6,7 +6,7 @@ export default function Logo() {
   return (
     <Link href="/" className="relative w-40 h-20">
       <Image
-        src="/icons/commonLayout/header/Logo.png"
+        src="https://img.tkzc886.com/imgcn/tkzc/tkzcminilogo4.png"
         alt="Company Logo"
         fill
         placeholder="blur"
