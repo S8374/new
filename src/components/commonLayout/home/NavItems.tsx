@@ -10,7 +10,7 @@ const NavItems = () => {
   ];
 
   return (
-    <div className="flex flex-wrap justify-center gap-6 md:gap-8 py-4 px-2">
+    <div className="flex flex-wrap justify-center gap-6 md:gap-8 px-2">
       {items.map((item, index) => (
         <div key={index} className="flex flex-col items-center group">
           {/* Icon with gradient background */}
@@ -22,7 +22,7 @@ const NavItems = () => {
             />
           </div>
           {/* Label */}
-          <span className="mt-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+          <span className="mt-2 text-sm font-medium text-background dark:text-gray-300">
             {item.label}
           </span>
         </div>

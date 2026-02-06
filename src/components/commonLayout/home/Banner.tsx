@@ -8,34 +8,59 @@ import Marquee from "react-fast-marquee";
 import "swiper/css";
 import "swiper/css/pagination";
 import "swiper/css/navigation";
+import { Megaphone } from "lucide-react";
 
 const slides = [
   {
-    title: "Slide One",
-    subtitle: "Amazing Nature",
-    text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam dictum mattis velit.",
-    image: "https://swiperjs.com/demos/images/nature-1.jpg",
+    title: "",
+    subtitle: "",
+    text: "",
+    image: "https://admin.tkv6test.cc/uploads/20251126/0ab6232392ffde09f96e20d02035afea.png",
   },
   {
-    title: "Slide Two",
-    subtitle: "Beautiful View",
-    text: "Integer laoreet magna nec elit suscipit, ac laoreet nibh euismod.",
-    image: "https://swiperjs.com/demos/images/nature-2.jpg",
+    title: "",
+    subtitle: "",
+    text: "",
+    image: "https://admin.tkv6test.cc/uploads/20251126/1f97f88339250ae8d7a654b598a645d8.png",
   },
   {
-    title: "Slide Three",
-    subtitle: "Peaceful Place",
-    text: "Aliquam hendrerit lorem at elit facilisis rutrum.",
-    image: "https://swiperjs.com/demos/images/nature-3.jpg",
+    title: "",
+    subtitle: "",
+    text: "",
+    image: "https://admin.tkv6test.cc/uploads/20251126/ef98c6653485bd4e4176289a99ceeaab.png",
+  },
+  {
+    title: "",
+    subtitle: "",
+    text: "",
+    image: "https://admin.tkv6test.cc/uploads/20251126/52181298ba1f93bc7d5a6757fb663c2b.png",
+  },
+  {
+    title: "",
+    subtitle: "",
+    text: "",
+    image: "https://admin.tkv6test.cc/uploads/20251126/85c4e0392491a68c1188c1964cb2e1d2.png",
+  },
+  {
+    title: "",
+    subtitle: "",
+    text: "",
+    image: "https://admin.tkv6test.cc/uploads/20251126/0ab6232392ffde09f96e20d02035afea.png",
   },
 ];
 
 export default function Banner() {
   return (
-    <div className="">
-      <Marquee>
-  I can be a React component, multiple React components, or just some text.
-</Marquee>
+    <div className="relative rounded-xl overflow-hidden">
+      <div className=" bg-chart-4/30">
+        <div className="p-2 flex ">
+          <Megaphone className="pr-1 text-chart-4 "/>
+          <Marquee className="text-background">
+            I can be a React component, multiple React components, or just some text.
+          </Marquee>
+        </div>
+      </div>
+
       <div>
         <Swiper
           speed={800}
@@ -44,7 +69,7 @@ export default function Banner() {
           pagination={{ clickable: true }}
           navigation
           modules={[Parallax, Pagination, Navigation, Autoplay]}
-          className="w-full h-[60vh] md:h-[40vh]"
+          className="w-full h-[30vh] md:h-[30vh]"
         >
           {slides.map((slide, index) => (
             <SwiperSlide key={index}>

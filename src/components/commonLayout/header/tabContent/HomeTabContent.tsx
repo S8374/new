@@ -17,9 +17,10 @@ const SLOT_GAMES = [
 ]
 const HomeTabCOntent = () => {
   return (
-    <div>
+    <div className="bg-[#3B393A]">
       <CardSlider
         items={HOT_GAMES}
+                rounded={false}
         title="Hot Games"
         icon="🔥"
         cardWidth={{ base: "120px", sm: "130px", md: "150px" }}
@@ -35,11 +36,11 @@ const HomeTabCOntent = () => {
         cardHeight="120px"
         spaceBetween={12}
       />
-      <CardSlider
+     <CardSlider
         items={SLOT_GAMES}
         title="Lottery Games"
         rounded={false}
-        icon="🔥"
+         icon="🔥"
         cardWidth={{ base: "140px", sm: "140px", md: "160px" }}
         cardHeight="120px"
         spaceBetween={12}

@@ -45,7 +45,7 @@ const BuyCryptoSection = () => {
   };
 
   return (
-    <div className="bg-gray-800 rounded-xl p-6 max-w-4xl mx-auto">
+    <div className="bg-[#3B393A] rounded-xl p-6 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
         <h2 className="text-xl font-bold text-white">Buy Crypto</h2>

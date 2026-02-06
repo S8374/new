@@ -9,6 +9,7 @@ import { Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import { Button } from "../ui/button";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 
 interface CardSliderItem {
     id: string | number;
@@ -53,10 +54,10 @@ export default function CardSlider({
     const roundedClass = rounded ? "rounded-lg" : "";
 
     return (
-        <div className={`w-full bg-background px-4 py-4 ${className}`}>
+        <div className={`w-full bg-[#3B393A] px-4 py-4 ${className}`}>
             {(title || icon) && (
                 <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2 text-foreground font-semibold">
+                    <div className="flex items-center gap-2 text-background font-semibold">
                         {icon} <span>{title}</span>
                     </div>
 
@@ -67,17 +68,19 @@ export default function CardSlider({
                             className={`w-8 h-8 flex items-center justify-center text-foreground
                 ${isBeginning ? "opacity-40 cursor-not-allowed" : "hover:bg-black/30"}`}
                         >
-                            ‹
+                           
+                            <ArrowLeft/>
                         </Button>
 
-                        <button
+                        <Button
                             onClick={() => swiper?.slideNext()}
                             disabled={!swiper || isEnd}
                             className={`w-8 h-8 flex items-center justify-center text-foreground
                 ${isEnd ? "opacity-40 cursor-not-allowed" : "hover:bg-black/30"}`}
                         >
-                            ›
-                        </button>
+                           
+                            <ArrowRight/>
+                        </Button>
                     </div>
                 </div>
             )}

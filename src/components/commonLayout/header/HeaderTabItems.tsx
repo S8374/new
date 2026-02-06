@@ -52,16 +52,16 @@ const HeaderTabItems = () => {
       defaultValue="home" 
       value={activeTab}
       onValueChange={setActiveTab}
-      className="w-full"
+      className="w-full bg-[#3B393A]"
     >
       {/* Scrollable Tabs List */}
-      <div className="relative mb-4">
+      <div className="relative mb-4 bg-[#3B393A]">
         
         <ScrollArea 
           ref={scrollAreaRef}
-          className="w-full whitespace-nowrap rounded-md px-4"
+          className="w-full whitespace-nowrap bg-[#3B393A] "
         >
-          <TabsList className="inline-flex h-10 items-center justify-center  bg-muted p-1 text-muted-foreground gap-2 min-w-full">
+          <TabsList className="inline-flex h-10 bg-[#3B393A] items-center justify-center   p-1 text-background gap-2 min-w-full">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
@@ -69,12 +69,13 @@ const HeaderTabItems = () => {
                   key={tab.id}
                   value={tab.id}
                   className={`
-                    inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium 
+                    inline-flex items-center justify-center whitespace-nowrap  px-3 py-1.5 text-sm font-medium 
+                    text-background
                     ring-offset-background transition-all duration-300 ease-in-out focus-visible:outline-none 
                     focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 
                     disabled:pointer-events-none disabled:opacity-50
-                    data-[state=active]:bg-background data-[state=active]:text-foreground 
-                    data-[state=active]:shadow-sm hover:bg-muted/80
+                    data-[state=active]:bg-[#3B393A] data-[state=active]:text-background 
+                    data-[state=active]:shadow-sm hover:bg-[#3B393A]
                     min-w-fit
                   `}
                 >

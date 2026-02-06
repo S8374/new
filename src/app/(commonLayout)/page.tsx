@@ -6,9 +6,11 @@ import NavItems from "@/components/commonLayout/home/NavItems";
 export default function Home() {
   return (
     <main className="min-h-screen space-y-8 ">
-      <Banner />
-      <NavItems/>
-      <HeaderTabItems/>
+      <div className="py-2 px-2">
+        <Banner />
+      </div>
+      <NavItems />
+      <HeaderTabItems />
     </main>
   );
 }
