@@ -28,7 +28,7 @@ const Footer = () => {
 
   return (
     <>
-      <footer className="bg-[#22222B] sticky bottom-0 z-50 border-t border-gray-700">
+      <footer className="bg-[#22222B]/80 sticky bottom-0 z-50 backdrop-blur-sm ">
         <nav className="flex justify-around items-center h-16 px-2">
           {navItems.map((item) => {
             const isActive = pathname === item.href;

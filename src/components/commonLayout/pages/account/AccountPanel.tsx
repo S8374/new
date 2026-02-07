@@ -18,15 +18,17 @@ import {
   Download,
   Sparkles,
   ArrowRight,
+  GamepadDirectional,
 } from "lucide-react";
+import Link from "next/link";
 
 export default function ProfileWallet() {
   return (
     <div className="min-h-screen bg-[#3b3b3b] text-white p-4 max-w-md mx-auto">
       {/* Header */}
-      <div   style={{
-                    backgroundImage: "url('https://img.tkzc886.com/imgcn/tkzc/bg_login.webp')",
-                }} className="relative  bg-no-repeat bg-cover  rounded-xl bg-linear-to-br from-chart-4 pt-52 to-chart-4/25 p-4 mb-4">
+      <div style={{
+        backgroundImage: "url('https://img.tkzc886.com/imgcn/tkzc/bg_login.webp')",
+      }} className="relative  bg-no-repeat bg-cover  rounded-xl bg-linear-to-br from-chart-4 pt-52 to-chart-4/25 p-4 mb-4">
         <div className="flex items-center gap-3">
           <img
             src="https://img.tkzc886.com/imgcn/tkzc/bg_login.webp"
@@ -74,12 +76,18 @@ export default function ProfileWallet() {
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <button className="bg-yellow-400 text-black py-2 rounded-lg font-semibold flex items-center justify-center gap-2">
-            <Wallet size={18} /> Deposit
-          </button>
-          <button className="bg-gray-600 py-2 rounded-lg font-semibold flex items-center justify-center gap-2">
+        <Link href="/deposit" className="block">
+  <button className="bg-yellow-400 text-black py-2 rounded-lg font-semibold flex items-center justify-center gap-2 w-full">
+    <Wallet size={18} /> Deposit
+  </button>
+</Link>
+        <Link href={`/withdraw`}>
+          <button
+            className="bg-gray-600 py-2 rounded-lg font-semibold flex items-center justify-center gap-2"
+          >
             <ArrowDownToLine size={18} /> Withdraw
           </button>
+        </Link>
         </div>
 
         {/* Menu Grid */}
@@ -116,11 +124,15 @@ export default function ProfileWallet() {
 
       {/* List Menu */}
       <div className="bg-[#4a4a4a] rounded-xl divide-y divide-gray-600">
-        <ListItem icon={<ShieldCheck />} label="Safe Center" />
-        <ListItem icon={<Users />} label="Affiliate" />
-        <ListItem icon={<Download />} label="Vpn Download" />
-        <ListItem icon={<Sparkles />} label="LuckySpin" />
+        <ListItem icon={<ShieldCheck />} label="Safe Center" href="/safe-center" />
+        <ListItem icon={<Users />} label="Affiliate" href="/affiliate" />
+        <ListItem icon={<Download />} label="Vpn Download" href="/vpn-download" />
+        <ListItem icon={<Sparkles />} label="LuckySpin" href="/lucky-spin" />
+        <ListItem icon={<GamepadDirectional />} label="Red Packet" href="/red-packet" />
+
+
       </div>
+     
     </div>
   );
 }
@@ -133,14 +145,15 @@ const MenuItem = ({ icon, label }: any) => (
   </div>
 );
 
-const ListItem = ({ icon, label }: any) => (
-  <div className="flex items-center justify-between p-4">
-    <div className="flex items-center gap-3">
-      <span className="text-yellow-400">{icon}</span>
-      <span>{label}</span>
+const ListItem = ({ icon, label, href }: any) => (
+  <Link href={href} className="block">
+    <div className="flex items-center justify-between p-4 hover:bg-gray-600 transition rounded-xl">
+      <div className="flex items-center gap-3">
+        <span className="text-yellow-400">{icon}</span>
+        <span>{label}</span>
+      </div>
+      <ArrowRight className="text-gray-300" />
     </div>
-    <Button className="text-foreground">
-        <ArrowRight/>
-    </Button>
-  </div>
+  </Link>
 );
+

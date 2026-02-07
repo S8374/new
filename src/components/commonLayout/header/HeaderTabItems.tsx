@@ -52,10 +52,10 @@ const HeaderTabItems = () => {
       defaultValue="home" 
       value={activeTab}
       onValueChange={setActiveTab}
-      className="w-full bg-[#3B393A]"
+      className="w-full bg-[#3B393A] sticky"
     >
       {/* Scrollable Tabs List */}
-      <div className="relative mb-4 bg-[#3B393A]">
+      <div className=" sticky top-16 z-40 mb-4 ">
         
         <ScrollArea 
           ref={scrollAreaRef}
@@ -69,13 +69,13 @@ const HeaderTabItems = () => {
                   key={tab.id}
                   value={tab.id}
                   className={`
-                    inline-flex items-center justify-center whitespace-nowrap  px-3 py-1.5 text-sm font-medium 
+                    inline-flex items-center justify-center whitespace-nowrap rounded  px-2 py-4 text-sm font-medium 
                     text-background
                     ring-offset-background transition-all duration-300 ease-in-out focus-visible:outline-none 
                     focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 
                     disabled:pointer-events-none disabled:opacity-50
-                    data-[state=active]:bg-[#3B393A] data-[state=active]:text-background 
-                    data-[state=active]:shadow-sm hover:bg-[#3B393A]
+                    data-[state=active]:bg-[#525151] data-[state=active]:text-background 
+                    data-[state=active]:shadow-sm hover:bg-[#3B393A] data-[state=active]:rounded
                     min-w-fit
                   `}
                 >

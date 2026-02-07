@@ -51,7 +51,7 @@ const slides = [
 
 export default function Banner() {
   return (
-    <div className="relative rounded-xl overflow-hidden">
+    <div className="relative rounded-xl  overflow-hidden">
       <div className=" bg-chart-4/30">
         <div className="p-2 flex ">
           <Megaphone className="pr-1 text-chart-4 "/>

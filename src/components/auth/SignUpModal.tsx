@@ -37,7 +37,7 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+    <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
       <div
         ref={modalRef}
         className="relative w-full bg-no-repeat bg-cover max-w-md rounded-2xl overflow-hidden bg-gray-900 border border-gray-800 shadow-2xl"
