@@ -35,7 +35,7 @@ const HotTabCOntent = () => {
         rounded={false}
         icon="🔥"
         cardWidth={{ base: "140px", sm: "140px", md: "160px" }}
-        cardHeight="120px"
+        cardHeight="160px"
         spaceBetween={12} // ← now fixed via gap-3
       />
     </div>

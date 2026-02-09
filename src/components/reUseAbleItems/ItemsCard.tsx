@@ -73,12 +73,12 @@ const ItemsCard = ({
               <img
                 src={item.imageUrl}
                 alt={item.title}
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                className="absolute inset-0 w-full h-full bg-no-repeat bg-cover bg-contain  transition-transform duration-300 group-hover:scale-105"
                 loading="lazy"
               />
             </div>
 
-            {/* Text */}
+            {/* Text
             <div className="p-2 text-white">
               <div className="text-sm font-semibold leading-tight truncate">
                 {item.title}
@@ -91,7 +91,7 @@ const ItemsCard = ({
               )}
 
               {item.extra && <div className="mt-1">{item.extra}</div>}
-            </div>
+            </div> */}
           </div>
         ))}
       </div>

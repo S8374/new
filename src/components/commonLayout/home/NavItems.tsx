@@ -3,35 +3,35 @@ import { Wallet, CreditCard, Star, TrendingUp, Users } from "lucide-react";
 
 const NavItems = () => {
   const items = [
-    { 
-      icon: Wallet, 
-      label: "Deposit", 
+    {
+      iconImg: "https://tkzc668.com/static/img/%E9%87%91%E5%88%9A%E5%8C%BA_%E5%85%85%E5%80%BC.79e3487a.webp",
+      label: "Deposit",
       href: "/deposit",
-      color: "from-blue-500 to-cyan-500" 
+      color: "from-blue-500 to-cyan-500",
     },
-    { 
-      icon: CreditCard, 
-      label: "Withdraw", 
+    {
+      iconImg: "https://tkzc668.com/static/img/recharge.77f88fba.png",
+      label: "Withdraw",
       href: "/withdraw",
-      color: "from-green-500 to-emerald-500" 
+      color: "from-green-500 to-emerald-500",
     },
-    { 
-      icon: Star, 
-      label: "Task", 
+    {
+      iconImg: "https://tkzc668.com/static/img/renwu.08955b7b.png",
+      label: "Task",
       href: "/tasks",
-      color: "from-purple-500 to-pink-500" 
+      color: "from-purple-500 to-pink-500",
     },
-    { 
-      icon: TrendingUp, 
-      label: "Income", 
+    {
+      iconImg: "https://tkzc668.com/static/img/shouru.c9225545.png",
+      label: "Income",
       href: "/my-income",
-      color: "from-rose-500 to-pink-500" 
+      color: "from-rose-500 to-pink-500",
     },
-    { 
-      icon: Users, 
-      label: "Invite", 
+    {
+      iconImg: "https://tkzc668.com/static/img/inviteFriends.78ba91c4.png",
+      label: "Invite",
       href: "/invite",
-      color: "from-indigo-500 to-violet-500" 
+      color: "from-indigo-500 to-violet-500",
     },
   ];
 
@@ -45,13 +45,17 @@ const NavItems = () => {
         >
           {/* Icon */}
           <div
-            className={`w-12 h-12 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform duration-300`}
+            className={`w-14 h-14 rounded-xl 
+            flex items-center justify-center 
+            group-hover:scale-105 transition-transform duration-300`}
           >
-            <item.icon
-              size={20}
-              strokeWidth={1.5}
-              className="text-white"
-            />
+            
+              <img
+                src={item.iconImg}
+                alt={item.label}
+                className="object-contain"
+              />
+         
           </div>
 
           {/* Label */}

@@ -28,6 +28,8 @@ interface CardSliderProps {
     icon?: ReactNode;
     className?: string;
     rounded?: boolean; // optional rounded control
+    showArrows?: boolean; // ✅ NEW
+
 }
 
 export default function CardSlider({
@@ -39,6 +41,8 @@ export default function CardSlider({
     icon,
     className = "",
     rounded = true,
+    showArrows = true, // ✅ default: show arrows
+
 }: CardSliderProps) {
     const [swiper, setSwiper] = useState<any>(null);
     const [isBeginning, setIsBeginning] = useState(true);
@@ -61,27 +65,28 @@ export default function CardSlider({
                         {icon} <span>{title}</span>
                     </div>
 
-                    <div className="flex gap-2">
-                        <Button
-                            onClick={() => swiper?.slidePrev()}
-                            disabled={!swiper || isBeginning}
-                            className={`w-8 h-8 flex items-center justify-center text-foreground
-                ${isBeginning ? "opacity-40 cursor-not-allowed" : "hover:bg-black/30"}`}
-                        >
-                           
-                            <ArrowLeft/>
-                        </Button>
 
-                        <Button
-                            onClick={() => swiper?.slideNext()}
-                            disabled={!swiper || isEnd}
-                            className={`w-8 h-8 flex items-center justify-center text-foreground
-                ${isEnd ? "opacity-40 cursor-not-allowed" : "hover:bg-black/30"}`}
-                        >
-                           
-                            <ArrowRight/>
-                        </Button>
-                    </div>
+                    {showArrows && (
+                        <div className="flex gap-2">
+                            <Button
+                                onClick={() => swiper?.slidePrev()}
+                                disabled={!swiper || isBeginning}
+                                className={`w-8 h-8 flex items-center justify-center text-foreground
+          ${isBeginning ? "opacity-40 cursor-not-allowed" : "hover:bg-black/30"}`}
+                            >
+                                <ArrowLeft />
+                            </Button>
+
+                            <Button
+                                onClick={() => swiper?.slideNext()}
+                                disabled={!swiper || isEnd}
+                                className={`w-8 h-8 flex items-center justify-center text-foreground
+          ${isEnd ? "opacity-40 cursor-not-allowed" : "hover:bg-black/30"}`}
+                            >
+                                <ArrowRight />
+                            </Button>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -121,13 +126,13 @@ export default function CardSlider({
                                 <img
                                     src={item.imageUrl}
                                     alt={item.title}
-                                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                    className="absolute bg-no-repeat bg-cover bg-contain inset-0 w-full h-full transition-transform duration-300 group-hover:scale-105"
                                     loading="lazy"
                                 />
                             </div>
 
                             {/* Text */}
-                            <div className="p-2 text-white">
+                            {/* <div className="p-2 text-white">
                                 <div className="text-sm font-semibold leading-tight truncate">
                                     {item.title}
                                 </div>
@@ -137,7 +142,7 @@ export default function CardSlider({
                                     </div>
                                 )}
                                 {item.extra && <div className="mt-1">{item.extra}</div>}
-                            </div>
+                            </div> */}
                         </div>
                     </SwiperSlide>
                 ))}
