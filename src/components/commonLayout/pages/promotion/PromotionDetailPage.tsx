@@ -1,6 +1,7 @@
 // components/promotions/PromotionDetailPage.tsx
 "use client";
 
+import BackButton from "@/components/ui/BackButton";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -25,16 +26,10 @@ export default function PromotionDetailPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-[#1A1826] to-[#2D2C3A] pb-20">
-            <div className="relative h-14 flex items-center px-4 bg-gradient-to-r from-[#0F0D2A] to-[#3A1C71]">
+        <div className="min-h-screen bg-linear-to-b from-[#1A1826] to-[#2D2C3A] pb-20">
+            <div className="relative h-14 flex items-center px-4 bg-linear-to-r from-[#0F0D2A] to-[#3A1C71]">
                 {/* Back Button */}
-                <button
-                    
-                    className="absolute left-4 w-8 h-8 rounded-full bg-black/30 flex items-center justify-center text-white hover:bg-black/40 transition-colors"
-                    aria-label="Back"
-                >
-                    <ArrowLeft/>
-                </button>
+                  <BackButton fallback="/" />
 
                 {/* Title - centered */}
                 <h1 className="text-xl font-bold text-white mx-auto">ytaeryre</h1>

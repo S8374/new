@@ -2,7 +2,7 @@
 
 import { BellIcon, ChevronDownIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+//import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,7 +45,7 @@ export default function DashboardHeader() {
         </Button>
 
         {/* User Profile */}
-        <div className="flex items-center gap-3 border-l border-white/20 pl-4">
+        {/* <div className="flex items-center gap-3 border-l border-white/20 pl-4">
           <div className="text-right leading-tight">
             <p className="text-sm font-medium">Md. Rezaul Haque</p>
             <p className="text-xs text-green-400">Available</p>
@@ -54,7 +54,7 @@ export default function DashboardHeader() {
             <AvatarImage src="/avatar.jpg" />
             <AvatarFallback>MR</AvatarFallback>
           </Avatar>
-        </div>
+        </div> */}
 
       </div>
     </header>

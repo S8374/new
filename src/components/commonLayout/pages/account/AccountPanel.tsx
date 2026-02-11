@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @next/next/no-img-element */
 "use client";
-
-import { Button } from "@/components/ui/button";
 import {
   Wallet,
   ArrowDownToLine,
@@ -32,13 +30,13 @@ export default function ProfileWallet() {
         <div className="relative     pt-32 p-4 mb-4">
           <div className="flex items-center gap-3">
             <img
-              src="https://img.tkzc886.com/imgcn/tkzc/bg_login.webp"
-              className="w-14 h-14 rounded-full border-2 border-yellow-400"
+              src="https://tkzc668.com/static/img/avatar1.ab81aa68.png"
+              className="w-20 h-20 rounded-full border-2 border-yellow-400"
               alt="avatar"
             />
             <div>
-              <p className="font-semibold text-lg">roni123</p>
-              <p className="text-xs text-gray-300 flex items-center gap-1">
+              <p className="font-semibold text-xl">roni123</p>
+              <p className="text-xl text-gray-300 flex items-center gap-1">
                 ID: 72059
               </p>
             </div>
@@ -49,8 +47,8 @@ export default function ProfileWallet() {
         {/* VIP */}
         <div className="mt-4 bg-[#4a4a4a] w-full rounded-lg p-3">
           <div className="flex justify-between items-center mb-2">
-            <span className="font-semibold text-sm">VIP0</span>
-            <button className="text-yellow-400 text-xs font-semibold">
+            <span className="font-semibold text-xl">VIP0</span>
+            <button className="text-yellow-400 text-xl font-semibold">
               VIP Details &gt;
             </button>
           </div>
@@ -93,13 +91,13 @@ export default function ProfileWallet() {
 
           {/* Menu Grid */}
           <div className="grid grid-cols-4 gap-4 mt-5 text-center text-xs">
-            <MenuItem icon={<FileText />} label="Balance Det" />
-            <MenuItem icon={<BarChart3 />} label="Profit Report" />
-            <MenuItem icon={<Repeat />} label="Transaction" />
-            <MenuItem icon={<ClipboardList />} label="Task" />
-            <MenuItem icon={<Coins />} label="My Bets" />
-            <MenuItem icon={<Bitcoin />} label="Buy Crypto" />
-            <MenuItem icon={<Gift />} label="LuckyWheel" />
+            <MenuItem icon={<FileText />} label="Balance Det" href="/balance-det"  />
+            <MenuItem icon={<BarChart3 />} label="Profit Report" href="profit-report" />
+            <MenuItem icon={<Repeat />} label="Transaction" href="transaction-record" />
+            <MenuItem icon={<ClipboardList />} label="Task" href="tasks" />
+            <MenuItem icon={<Coins />} label="My Bets" href="" />
+            <MenuItem icon={<Bitcoin />} label="Buy Crypto" href=""/>
+            <MenuItem icon={<Gift />} label="LuckyWheel" href=""/>
           </div>
         </div>
 
@@ -140,16 +138,19 @@ export default function ProfileWallet() {
 }
 
 /* Reusable Components */
-const MenuItem = ({ icon, label }: any) => (
-  <div className="flex flex-col items-center gap-1 text-gray-200">
+const MenuItem = ({ icon, label ,href}: any) => (
+  <Link href={href}>
+    <div className="flex flex-col  cursor-pointer items-center gap-1 text-gray-200">
     <div className="text-background">{icon}</div>
     <span>{label}</span>
   </div>
+  </Link>
+
 );
 
 const ListItem = ({ icon, label, href }: any) => (
   <Link href={href} className="block">
-    <div className="flex items-center justify-between p-4 hover:bg-gray-600 transition rounded-xl">
+    <div className="flex items-center justify-between p-4  transition ">
       <div className="flex items-center gap-3">
         <span className="text-yellow-400">{icon}</span>
         <span>{label}</span>

@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 "use client"
 import StepTaskCard from "@/components/reUseAbleItems/TaskCard"
+import BackButton from "@/components/ui/BackButton";
 import { ArrowLeft } from "lucide-react"
 import { useState } from "react";
 
@@ -11,13 +12,7 @@ const page = () => {
         <div>
             <div className="relative h-14 flex items-center px-4 bg-gradient-to-r from-[#0F0D2A] to-[#3A1C71]">
                 {/* Back Button */}
-                <button
-
-                    className="absolute left-4 w-8 h-8 rounded-full bg-black/30 flex items-center justify-center text-white hover:bg-black/40 transition-colors"
-                    aria-label="Back"
-                >
-                    <ArrowLeft />
-                </button>
+                <BackButton fallback="/" />
 
                 {/* Title - centered */}
                 <h1 className="text-xl font-bold text-white mx-auto">ytaeryre</h1>

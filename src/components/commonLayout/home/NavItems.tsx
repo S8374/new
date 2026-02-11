@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Wallet, CreditCard, Star, TrendingUp, Users } from "lucide-react";
 
 const NavItems = () => {
   const items = [

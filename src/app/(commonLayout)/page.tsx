@@ -9,7 +9,6 @@ export default function Home() {
       <div className="py-2 px-2 bg-linear-to-b from-chart-4/30 to-bg-[#3B393A]">
         <Banner />
       </div>
-
       <NavItems />
       <HeaderTabItems />
     </main>

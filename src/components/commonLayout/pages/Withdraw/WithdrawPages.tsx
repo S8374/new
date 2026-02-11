@@ -1,4 +1,5 @@
 "use client"
+import BackButton from "@/components/ui/BackButton";
 import { ArrowLeft, ChevronDown, FileText, Wallet } from "lucide-react"
 import { useState } from "react";
 
@@ -20,12 +21,7 @@ const WithdrawPages = () => {
               >
                 {/* Header */}
                 <div className="p-4 flex items-center justify-between border-b border-gray-800">
-                  <button
-                    className="w-10 h-10 rounded-full bg-black/30 flex items-center justify-center text-white hover:bg-black/40"
-                    aria-label="Back"
-                  >
-                    <ArrowLeft className="w-5 h-5" />
-                  </button>
+                  <BackButton/>
                   <h2 className="text-xl font-bold text-white">Withdraw</h2>
                   <button className="w-10 h-10 rounded-full bg-black/30 flex items-center justify-center text-white hover:bg-black/40">
                     <FileText className="w-5 h-5" />

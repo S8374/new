@@ -15,6 +15,7 @@ import SetWithdrawPasswordModal from "./modal/SetWithdrawPasswordModal";
 import ModifyLoginPasswordModal from "./modal/ModifyLoginPasswordModal";
 import SetEmailModal from "./modal/SetEmailModal";
 import AddNewAddressModal from "./modal/AddNewAddressModal";
+import BackButton from "@/components/ui/BackButton";
 
 
 export default function SafeCenter() {
@@ -54,6 +55,12 @@ export default function SafeCenter() {
 
   return (
     <div className="min-h-screen bg-[#0F0D2A] pb-20">
+       {/* Header */}
+                      <div className="p-4 flex items-center justify-between border-b border-gray-800">
+                        <BackButton/>
+                        <h2 className="text-xl font-bold text-white">Withdraw</h2>
+                        <p></p>
+                      </div>
       {/* Header */}
       <div className="relative h-48 overflow-hidden">
         <div

@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { AlertCircle, X } from "lucide-react";
+import BackButton from "../ui/BackButton";
 
 export default function RedPacketPage () {
   const [type, setType] = useState<"Newcomer" | "All person">("Newcomer");
@@ -15,6 +16,8 @@ export default function RedPacketPage () {
     <div className="min-h-screen bg-[#1E1D2A] pb-20">
       {/* Header */}
       <div className="relative h-16 flex items-center px-4 border-b border-gray-800">
+          <BackButton className="mr-3" fallback="/" />
+
         <h1 className="text-xl font-bold text-white flex-1 text-center">Red Packet</h1>
         <button className="w-8 h-8 rounded-full bg-black/30 flex items-center justify-center text-white hover:bg-black/40">
           <X className="w-5 h-5" />

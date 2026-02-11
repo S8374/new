@@ -9,6 +9,7 @@ import {
   Download,
   User,
   CupSoda,
+  Headset,
 } from "lucide-react";
 import { useState } from "react";
 import CustomerModal from "../model/CustomerModal";
@@ -21,7 +22,7 @@ const Footer = () => {
     { id: "home", label: "Home", href: "/", icon: Home },
     { id: "promotion", label: "Promo", href: "/promotion", icon: Gift },
     // ⚠️ Customer now opens modal, not link
-    { id: "customer", label: "Customer", href: "#", icon: CupSoda },
+    { id: "customer", label: "Customer", href: "#", icon: Headset },
     { id: "download", label: "Download", href: "/download", icon: Download },
     { id: "account", label: "Account", href: "/account", icon: User },
   ];
@@ -46,7 +47,7 @@ const Footer = () => {
                     window.location.href = item.href;
                   }
                 }}
-                className={`flex flex-col items-center justify-center gap-1 flex-1 py-2 transition
+                className={`flex flex-col cursor-pointer items-center justify-center gap-1 flex-1 py-2 transition
                   ${
                     isActive
                       ? "text-chart-4"

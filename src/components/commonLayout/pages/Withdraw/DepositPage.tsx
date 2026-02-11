@@ -3,12 +3,12 @@
 
 import { useState } from "react";
 import { 
-  ArrowLeft, 
   FileText, 
   Wallet, 
   ChevronRight 
 } from "lucide-react";
 import Link from "next/link";
+import BackButton from "@/components/ui/BackButton";
 
 export default function DepositPage() {
   const walletAddress = "TEfuvvysBmXuUmBUxZGFM1J9a6LSVHGCP";
@@ -24,9 +24,7 @@ export default function DepositPage() {
     <div className="min-h-screen bg-[#1E1D2A] pb-8">
       {/* Header */}
       <div className="relative h-16 flex items-center px-4 border-b border-gray-800">
-        <Link href="/account" className="w-10 h-10 rounded-full bg-black/30 flex items-center justify-center text-white hover:bg-black/40 mr-3">
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
+        <BackButton/>
         <h1 className="text-xl font-bold text-white flex-1 text-center">Deposit</h1>
         <button className="w-10 h-10 rounded-full bg-black/30 flex items-center justify-center text-white hover:bg-black/40">
           <FileText className="w-5 h-5" />

@@ -1,6 +1,7 @@
 // components/account/SoftwareDownloads.tsx
 "use client";
 
+import BackButton from "@/components/ui/BackButton";
 import { Button } from "@/components/ui/button";
 import {
   Shield,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 
 export default function SoftwareDownloads() {
+   
   // VPN Recommendations
   const vpnApps = [
     {
@@ -59,13 +61,8 @@ export default function SoftwareDownloads() {
     <div className="min-h-screen bg-[#252334] text-white pb-20">
       {/* Header */}
       <div className="sticky top-0 z-10 h-16 flex items-center px-4 border-b border-gray-800 bg-[#252334]">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="rounded-full bg-black/30 hover:bg-black/50 mr-3"
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </Button>
+         <BackButton className="mr-3" fallback="/" />
+
         <h1 className="text-xl font-bold">Software Downloads</h1>
       </div>
 
