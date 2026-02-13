@@ -22,7 +22,7 @@ const promotionItems = [
   },
 ];
 
-export default function PromotionSection() {
+const PromotionSection= () => {
   return (
     <div
       style={{
@@ -62,3 +62,4 @@ export default function PromotionSection() {
     </div>
   );
 }
+export default PromotionSection ;

@@ -1,4 +1,3 @@
-// components/commonLayout/header/Header.tsx
 "use client";
 
 import { useState, useEffect, useRef } from "react";
