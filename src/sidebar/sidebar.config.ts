@@ -38,11 +38,11 @@ export const SIDEBAR_CONFIG: SidebarSection[] = [
         ],
       },
       {
-        title: "Phonebook",
+        title: "Slider",
         icon: Phone,
         items: [
-          { title: "Contacts", url: "/admin/phonebook/contacts", icon: Users },
-          { title: "Groups", url: "/admin/phonebook/groups", icon: Users },
+          { title: "Add Slider Type", url: "/admin/add-slider-type", icon: Users },
+          { title: "Add Slider", url: "/admin/sliders", icon: Users },
         ],
       },
       {

@@ -1,6 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
+import { authService } from "@/services/api/auth.services";
+import ReCAPTCHA from "react-google-recaptcha";
+import toast from "react-hot-toast";
 
 interface SignInModalProps {
   isOpen: boolean;
@@ -10,7 +14,13 @@ interface SignInModalProps {
 export default function SignInModal({ isOpen, onClose }: SignInModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // ESC key + click outside + body scroll lock
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [imHuman, setImHuman] = useState(false);
+  const [showCaptcha, setShowCaptcha] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // ESC + click outside + body scroll lock
   useEffect(() => {
     if (!isOpen) return;
 
@@ -36,6 +46,27 @@ export default function SignInModal({ isOpen, onClose }: SignInModalProps) {
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
+
+  const handleLogin = async () => {
+    if (!username || !password) return toast.error("All fields are required");
+    if (!imHuman) return toast.error("Please verify you are human");
+
+    try {
+      setLoading(true);
+      const res = await authService.login({ 
+        identifier: username, 
+        password, 
+        imHuman 
+      });
+      toast.success("Login successful 🎉");
+      onClose();
+      console.log("Logged in user:", res);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
@@ -72,6 +103,8 @@ export default function SignInModal({ isOpen, onClose }: SignInModalProps) {
             <input
               type="text"
               placeholder="Enter username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               className="w-full pl-10 pr-4 py-3 rounded-lg
                          bg-gray-800/50 border border-gray-700
                          text-white placeholder-gray-400
@@ -87,6 +120,8 @@ export default function SignInModal({ isOpen, onClose }: SignInModalProps) {
             <input
               type="password"
               placeholder="Enter password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               className="w-full pl-10 pr-4 py-3 rounded-lg
                          bg-gray-800/50 border border-gray-700
                          text-white placeholder-gray-400
@@ -94,55 +129,39 @@ export default function SignInModal({ isOpen, onClose }: SignInModalProps) {
             />
           </div>
 
-          {/* Options */}
-          <div className="flex justify-between text-sm">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" className="accent-yellow-500" />
-              <span className="text-gray-300">Remember password</span>
-            </label>
-            <span className="text-yellow-400 hover:underline cursor-pointer">
-              Forget password
-            </span>
-          </div>
-
-          {/* Human Check */}
-          <div className="flex items-center gap-2 text-gray-300">
+          {/* Human verification */}
+          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setShowCaptcha(true)}>
             <div className="w-5 h-5 rounded-full border-2 border-gray-500 flex items-center justify-center">
-              <div className="w-2.5 h-2.5 rounded-full bg-gray-300" />
+              {imHuman && (
+                <div className="w-2.5 h-2.5 rounded-full bg-green-400"></div>
+              )}
             </div>
-            I am human
+            <span className="text-gray-300">I am human</span>
           </div>
 
-          {/* Sign In */}
+          {/* CAPTCHA */}
+          {showCaptcha && (
+            <div className="flex justify-center mt-2">
+              <ReCAPTCHA
+                sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY as string}
+                onChange={() => {
+                  setImHuman(true);
+                  toast.success("Human verified ✅");
+                }}
+              />
+            </div>
+          )}
+
+          {/* Login button */}
           <button
+            onClick={handleLogin}
+            disabled={loading}
             className="w-full py-3 rounded-lg font-bold text-white
                        bg-gradient-to-r from-yellow-500 to-orange-600
                        hover:opacity-90 transition"
           >
-            SIGN IN
+            {loading ? "Signing in..." : "SIGN IN"}
           </button>
-
-          {/* Divider */}
-          <div className="flex items-center gap-3">
-            <div className="flex-1 border-t border-gray-700" />
-            <span className="text-xs text-gray-400">
-              使用以下方式免注册登录
-            </span>
-            <div className="flex-1 border-t border-gray-700" />
-          </div>
-
-          {/* Social Login */}
-          <div className="flex justify-center gap-4">
-            <button className="w-10 h-10 rounded-full bg-blue-500 text-white hover:scale-105 transition">
-              ✈️
-            </button>
-            <button className="w-10 h-10 rounded-full bg-blue-600 text-white hover:scale-105 transition">
-              f
-            </button>
-            <button className="w-10 h-10 rounded-full bg-red-500 text-white hover:scale-105 transition">
-              G
-            </button>
-          </div>
         </div>
 
         {/* Close */}
