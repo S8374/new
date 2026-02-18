@@ -1,26 +1,55 @@
-// app/(dashboard)/slider/create-type/page.tsx
+// app/(dashboard)/slider/edit-type/[id]/page.tsx
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { sliderTypeService } from "@/services/api/slider.types";
 import { uploadImageToImageBB } from "@/lib/imageUpload";
 import toast from "react-hot-toast";
 import { ArrowLeft, Link2, Upload } from "lucide-react";
 
-export default function CreateSliderTypePage() {
+
+export default function EditSliderTypePage() {
   const router = useRouter();
+  const params = useParams();
+  const typeId = params.id as string;
+
+  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
+  const [uploadMethod, setUploadMethod] = useState<"file" | "url">("file");
+  const [iconPreview, setIconPreview] = useState("");
+  
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     iconUrl: "",
     isActive: true
   });
-  const [iconFile, setIconFile] = useState<File | null>(null);
-  const [iconPreview, setIconPreview] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [uploadMethod, setUploadMethod] = useState<"file" | "url">("file");
+
+  useEffect(() => {
+    const fetchType = async () => {
+      try {
+        const res = await sliderTypeService.getSliderTypeById(typeId);
+        const type = res.data;
+        setFormData({
+          name: type.name || "",
+          description: type.description || "",
+          iconUrl: type.iconUrl || "",
+          isActive: type.isActive ?? true
+        });
+        if (type.iconUrl) {
+          setIconPreview(type.iconUrl);
+        }
+      } catch (error) {
+        toast.error("Failed to fetch slider type");
+        router.push("/slider");
+      } finally {
+        setFetching(false);
+      }
+    };
+    fetchType();
+  }, [typeId, router]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -44,7 +73,6 @@ export default function CreateSliderTypePage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setIconFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setIconPreview(reader.result as string);
@@ -63,15 +91,23 @@ export default function CreateSliderTypePage() {
 
     try {
       setLoading(true);
-      await sliderTypeService.createSliderType(formData);
-      toast.success("Slider type created successfully!");
+      await sliderTypeService.updateSliderType(typeId, formData);
+      toast.success("Slider type updated successfully!");
       router.push("/slider");
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to create slider type");
+      toast.error(error?.response?.data?.message || "Failed to update slider type");
     } finally {
       setLoading(false);
     }
   };
+
+  if (fetching) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -84,8 +120,8 @@ export default function CreateSliderTypePage() {
           <ArrowLeft />
           Back to Slider Management
         </Link>
-        <h1 className="text-3xl font-bold text-white">Create Slider Type</h1>
-        <p className="text-gray-400 mt-1">Define a new category for your sliders</p>
+        <h1 className="text-3xl font-bold text-white">Edit Slider Type</h1>
+        <p className="text-gray-400 mt-1">Update your slider type information</p>
       </div>
 
       {/* Form */}
@@ -100,11 +136,9 @@ export default function CreateSliderTypePage() {
             name="name"
             value={formData.name}
             onChange={handleInputChange}
-            placeholder="e.g., Hero Banner, Promotional Slider, etc."
             className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
             required
           />
-          <p className="text-xs text-gray-500 mt-1">Unique name for your slider type</p>
         </div>
 
         {/* Description */}
@@ -114,7 +148,6 @@ export default function CreateSliderTypePage() {
             name="description"
             value={formData.description}
             onChange={handleInputChange}
-            placeholder="What is this slider type used for?"
             rows={3}
             className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 resize-none"
           />
@@ -124,7 +157,6 @@ export default function CreateSliderTypePage() {
         <div>
           <label className="block text-gray-300 mb-2">Icon</label>
           
-          {/* Upload Method Toggle */}
           <div className="flex gap-3 mb-4">
             <button
               type="button"
@@ -153,32 +185,28 @@ export default function CreateSliderTypePage() {
           </div>
 
           {uploadMethod === "file" ? (
-            <div className="space-y-3">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="w-full text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-yellow-500 file:text-black hover:file:bg-yellow-600 cursor-pointer"
-              />
-            </div>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="w-full text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-yellow-500 file:text-black hover:file:bg-yellow-600 cursor-pointer"
+            />
           ) : (
             <input
               type="url"
               name="iconUrl"
               value={formData.iconUrl}
               onChange={handleInputChange}
-              placeholder="https://example.com/icon.png"
               className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
             />
           )}
 
-          {/* Preview */}
-          {(iconPreview || formData.iconUrl) && (
+          {iconPreview && (
             <div className="mt-4">
               <p className="text-sm text-gray-400 mb-2">Preview:</p>
               <div className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-gray-700">
                 <img
-                  src={iconPreview || formData.iconUrl}
+                  src={iconPreview}
                   alt="Icon preview"
                   className="w-full h-full object-cover"
                 />
@@ -192,17 +220,17 @@ export default function CreateSliderTypePage() {
           <button
             type="button"
             onClick={() => setFormData(prev => ({ ...prev, isActive: !prev.isActive }))}
-            className={`relative w-12 h-6 rounded-full transition-colors duration-200 ease-in-out ${
+            className={`relative w-12 h-6 rounded-full transition-colors ${
               formData.isActive ? 'bg-green-500' : 'bg-gray-600'
             }`}
           >
             <span
-              className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 ease-in-out ${
+              className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
                 formData.isActive ? 'transform translate-x-6' : ''
               }`}
             />
           </button>
-          <span className="text-gray-300">Active</span>
+          <span className="text-gray-300">{formData.isActive ? 'Active' : 'Inactive'}</span>
         </div>
 
         {/* Submit Button */}
@@ -214,7 +242,7 @@ export default function CreateSliderTypePage() {
                        bg-gradient-to-r from-yellow-500 to-orange-600
                        hover:opacity-90 transition disabled:opacity-50"
           >
-            {loading ? "Creating..." : "Create Slider Type"}
+            {loading ? "Updating..." : "Update Slider Type"}
           </button>
         </div>
       </form>

@@ -1,8 +1,8 @@
-// app/(dashboard)/slider/create/page.tsx
+// app/(dashboard)/slider/edit/[id]/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { sliderService } from "@/services/api/slider.service";
@@ -10,11 +10,14 @@ import { sliderTypeService } from "@/services/api/slider.types";
 import { uploadImageToImageBB } from "@/lib/imageUpload";
 import { ArrowLeft, Link2, Upload } from "lucide-react";
 
-export default function CreateSliderPage() {
+export default function EditSliderPage() {
   const router = useRouter();
+  const params = useParams();
+  const sliderId = params.id as string;
+
   const [sliderTypes, setSliderTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [fetchingTypes, setFetchingTypes] = useState(true);
+  const [fetching, setFetching] = useState(true);
   const [uploadMethod, setUploadMethod] = useState<"file" | "url">("file");
   const [imagePreview, setImagePreview] = useState("");
 
@@ -31,20 +34,43 @@ export default function CreateSliderPage() {
     isActive: true
   });
 
-  // Fetch slider types
   useEffect(() => {
-    const fetchTypes = async () => {
+    const fetchData = async () => {
       try {
-        const res = await sliderTypeService.getAllSliderTypes();
-        setSliderTypes(res.data || []);
+        // Fetch types and slider in parallel
+        const [typesRes, sliderRes] = await Promise.all([
+          sliderTypeService.getAllSliderTypes(),
+          sliderService.getSliderById(sliderId)
+        ]);
+
+        setSliderTypes(typesRes.data || []);
+        
+        const slider = sliderRes.data;
+        setFormData({
+          title: slider.title || "",
+          subtitle: slider.subtitle || "",
+          description: slider.description || "",
+          image: slider.image || "",
+          sliderTypeId: slider.sliderTypeId || "",
+          buttonText: slider.buttonText || "",
+          buttonLink: slider.buttonLink || "",
+          imageRedirectLink: slider.imageRedirectLink || "",
+          order: slider.order || 0,
+          isActive: slider.isActive ?? true
+        });
+        
+        if (slider.image) {
+          setImagePreview(slider.image);
+        }
       } catch (error) {
-        toast.error("Failed to fetch slider types");
+        toast.error("Failed to fetch slider data");
+        router.push("/slider");
       } finally {
-        setFetchingTypes(false);
+        setFetching(false);
       }
     };
-    fetchTypes();
-  }, []);
+    fetchData();
+  }, [sliderId, router]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -98,17 +124,17 @@ export default function CreateSliderPage() {
 
     try {
       setLoading(true);
-      await sliderService.createSlider(formData);
-      toast.success("Slider created successfully!");
+      await sliderService.updateSlider(sliderId, formData);
+      toast.success("Slider updated successfully!");
       router.push("/slider");
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to create slider");
+      toast.error(error?.response?.data?.message || "Failed to update slider");
     } finally {
       setLoading(false);
     }
   };
 
-  if (fetchingTypes) {
+  if (fetching) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
@@ -127,13 +153,13 @@ export default function CreateSliderPage() {
           <ArrowLeft />
           Back to Slider Management
         </Link>
-        <h1 className="text-3xl font-bold text-white">Create New Slider</h1>
-        <p className="text-gray-400 mt-1">Add a new slider to your collection</p>
+        <h1 className="text-3xl font-bold text-white">Edit Slider</h1>
+        <p className="text-gray-400 mt-1">Update your slider information</p>
       </div>
 
-      {/* Form */}
+      {/* Form - similar to create form but with edit button */}
       <form onSubmit={handleSubmit} className="bg-gray-900 rounded-xl border border-gray-800 p-6 space-y-6">
-        {/* Title */}
+        {/* ... All the same fields as create form ... */}
         <div>
           <label className="block text-gray-300 mb-2">
             Title <span className="text-red-500">*</span>
@@ -143,13 +169,11 @@ export default function CreateSliderPage() {
             name="title"
             value={formData.title}
             onChange={handleInputChange}
-            placeholder="Enter slider title"
             className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
             required
           />
         </div>
 
-        {/* Subtitle */}
         <div>
           <label className="block text-gray-300 mb-2">Subtitle</label>
           <input
@@ -157,19 +181,16 @@ export default function CreateSliderPage() {
             name="subtitle"
             value={formData.subtitle}
             onChange={handleInputChange}
-            placeholder="Enter subtitle (optional)"
             className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
           />
         </div>
 
-        {/* Description */}
         <div>
           <label className="block text-gray-300 mb-2">Description</label>
           <textarea
             name="description"
             value={formData.description}
             onChange={handleInputChange}
-            placeholder="Enter description (optional)"
             rows={3}
             className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 resize-none"
           />
@@ -181,7 +202,6 @@ export default function CreateSliderPage() {
             Image <span className="text-red-500">*</span>
           </label>
           
-          {/* Upload Method Toggle */}
           <div className="flex gap-3 mb-4">
             <button
               type="button"
@@ -210,32 +230,28 @@ export default function CreateSliderPage() {
           </div>
 
           {uploadMethod === "file" ? (
-            <div className="space-y-3">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="w-full text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-yellow-500 file:text-black hover:file:bg-yellow-600 cursor-pointer"
-              />
-            </div>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="w-full text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-yellow-500 file:text-black hover:file:bg-yellow-600 cursor-pointer"
+            />
           ) : (
             <input
               type="url"
               name="image"
               value={formData.image}
               onChange={handleInputChange}
-              placeholder="https://example.com/image.jpg"
               className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
             />
           )}
 
-          {/* Image Preview */}
-          {(imagePreview || formData.image) && (
+          {imagePreview && (
             <div className="mt-4">
               <p className="text-sm text-gray-400 mb-2">Preview:</p>
               <div className="relative w-full h-48 rounded-lg overflow-hidden border-2 border-gray-700">
                 <img
-                  src={imagePreview || formData.image}
+                  src={imagePreview}
                   alt="Preview"
                   className="w-full h-full object-cover"
                 />
@@ -274,7 +290,6 @@ export default function CreateSliderPage() {
               name="buttonText"
               value={formData.buttonText}
               onChange={handleInputChange}
-              placeholder="e.g., Shop Now"
               className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
             />
           </div>
@@ -285,7 +300,6 @@ export default function CreateSliderPage() {
               name="buttonLink"
               value={formData.buttonLink}
               onChange={handleInputChange}
-              placeholder="/products or https://"
               className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
             />
           </div>
@@ -301,7 +315,6 @@ export default function CreateSliderPage() {
             name="imageRedirectLink"
             value={formData.imageRedirectLink}
             onChange={handleInputChange}
-            placeholder="/promotion or https://"
             className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
             required
           />
@@ -319,7 +332,6 @@ export default function CreateSliderPage() {
               min="0"
               className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
             />
-            <p className="text-xs text-gray-500 mt-1">Lower numbers appear first</p>
           </div>
           
           <div>
@@ -328,12 +340,12 @@ export default function CreateSliderPage() {
               <button
                 type="button"
                 onClick={() => setFormData(prev => ({ ...prev, isActive: !prev.isActive }))}
-                className={`relative w-12 h-6 rounded-full transition-colors duration-200 ease-in-out ${
+                className={`relative w-12 h-6 rounded-full transition-colors ${
                   formData.isActive ? 'bg-green-500' : 'bg-gray-600'
                 }`}
               >
                 <span
-                  className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 ease-in-out ${
+                  className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
                     formData.isActive ? 'transform translate-x-6' : ''
                   }`}
                 />
@@ -352,7 +364,7 @@ export default function CreateSliderPage() {
                        bg-gradient-to-r from-yellow-500 to-orange-600
                        hover:opacity-90 transition disabled:opacity-50"
           >
-            {loading ? "Creating..." : "Create Slider"}
+            {loading ? "Updating..." : "Update Slider"}
           </button>
         </div>
       </form>

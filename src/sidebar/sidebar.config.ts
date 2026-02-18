@@ -41,6 +41,7 @@ export const SIDEBAR_CONFIG: SidebarSection[] = [
         title: "Slider",
         icon: Phone,
         items: [
+          { title: "Slider Controll", url: "/admin/slider-controll", icon: Users },
           { title: "Add Slider Type", url: "/admin/add-slider-type", icon: Users },
           { title: "Add Slider", url: "/admin/sliders", icon: Users },
         ],

@@ -27,7 +27,7 @@ const Header = () => {
     const fetchUser = async () => {
       try {
         setLoading(true);
-        const response = await authService.me(undefined); // ← assume it returns Promise
+        const response = await authService.me(undefined); 
         console.log(response)
         if (mounted) {
           setUser(response?.data || null);

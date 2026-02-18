@@ -1,5 +1,16 @@
+// services/api/slider.types.ts (update)
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import api from "../api";
+
+export interface SliderType {
+  _id: string;
+  name: string;
+  description?: string;
+  iconUrl?: string;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 export interface SliderTypeData {
   name: string;
@@ -14,7 +25,7 @@ export const sliderTypeService = {
     return response?.data;
   },
 
-  async getAllSliderTypes(): Promise<any> {
+  async getAllSliderTypes(): Promise<{ success: boolean; data: SliderType[] }> {
     const response = await api.get("/slider-type");
     return response?.data;
   },

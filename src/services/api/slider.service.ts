@@ -19,13 +19,23 @@ export const sliderService = {
     return response?.data;
   },
 
-  async getAllSliders(sliderTypeId?: string): Promise<any> {
-    const url = sliderTypeId 
-      ? `/slider?sliderTypeId=${sliderTypeId}` 
-      : "/slider";
-    const response = await api.get(url);
-    return response?.data;
-  },
+async getAllSliders(
+  options?: {
+    sliderTypeId?: string;
+    type?: string;
+  }
+): Promise<any> {
+
+  const response = await api.get("/slider", {
+    params: {
+      sliderTypeId: options?.sliderTypeId,
+      type: options?.type,
+    },
+  });
+
+  return response?.data;
+}
+,
 
   async getSliderById(id: string): Promise<any> {
     const response = await api.get(`/slider/${id}`);
