@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/(dashboard)/slider/create-type/page.tsx
 "use client";
 
@@ -21,6 +22,18 @@ export default function CreateSliderTypePage() {
   const [iconPreview, setIconPreview] = useState("");
   const [loading, setLoading] = useState(false);
   const [uploadMethod, setUploadMethod] = useState<"file" | "url">("file");
+  const sliderTypeOptions = [
+    { id: "home", label: "Home" },
+    { id: "hero", label: "Hero" },
+    { id: "hot", label: "Hot" },
+    { id: "recent-views", label: "Recent Views" },
+    { id: "slot-game", label: "Slot Game" },
+    { id: "live", label: "Live" },
+    { id: "fishing-game", label: "Fishing Game" },
+    { id: "lottory", label: "Lottory" },
+    { id: "sport", label: "Sport" },
+    { id: "table-game", label: "Table Game" },
+  ];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -56,7 +69,7 @@ export default function CreateSliderTypePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim()) {
       return toast.error("Name is required");
     }
@@ -91,21 +104,32 @@ export default function CreateSliderTypePage() {
       {/* Form */}
       <form onSubmit={handleSubmit} className="bg-gray-900 rounded-xl border border-gray-800 p-6 space-y-6">
         {/* Name */}
+        {/* Slider Type Selection */}
         <div>
           <label className="block text-gray-300 mb-2">
-            Name <span className="text-red-500">*</span>
+            Slider Type <span className="text-red-500">*</span>
           </label>
-          <input
-            type="text"
+
+          <select
             name="name"
             value={formData.name}
             onChange={handleInputChange}
-            placeholder="e.g., Hero Banner, Promotional Slider, etc."
             className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
             required
-          />
-          <p className="text-xs text-gray-500 mt-1">Unique name for your slider type</p>
+          >
+            <option value="">Select Slider Type</option>
+            {sliderTypeOptions.map((type) => (
+              <option key={type.id} value={type.id}>
+                {type.label}
+              </option>
+            ))}
+          </select>
+
+          <p className="text-xs text-gray-500 mt-1">
+            Choose one predefined slider type
+          </p>
         </div>
+
 
         {/* Description */}
         <div>
@@ -123,17 +147,16 @@ export default function CreateSliderTypePage() {
         {/* Icon */}
         <div>
           <label className="block text-gray-300 mb-2">Icon</label>
-          
+
           {/* Upload Method Toggle */}
           <div className="flex gap-3 mb-4">
             <button
               type="button"
               onClick={() => setUploadMethod("file")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${
-                uploadMethod === "file"
-                  ? "bg-yellow-500 text-black"
-                  : "bg-gray-800 text-gray-400 hover:text-white"
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${uploadMethod === "file"
+                ? "bg-yellow-500 text-black"
+                : "bg-gray-800 text-gray-400 hover:text-white"
+                }`}
             >
               <Upload />
               Upload File
@@ -141,11 +164,10 @@ export default function CreateSliderTypePage() {
             <button
               type="button"
               onClick={() => setUploadMethod("url")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${
-                uploadMethod === "url"
-                  ? "bg-yellow-500 text-black"
-                  : "bg-gray-800 text-gray-400 hover:text-white"
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${uploadMethod === "url"
+                ? "bg-yellow-500 text-black"
+                : "bg-gray-800 text-gray-400 hover:text-white"
+                }`}
             >
               <Link2 />
               Image URL
@@ -192,14 +214,12 @@ export default function CreateSliderTypePage() {
           <button
             type="button"
             onClick={() => setFormData(prev => ({ ...prev, isActive: !prev.isActive }))}
-            className={`relative w-12 h-6 rounded-full transition-colors duration-200 ease-in-out ${
-              formData.isActive ? 'bg-green-500' : 'bg-gray-600'
-            }`}
+            className={`relative w-12 h-6 rounded-full transition-colors duration-200 ease-in-out ${formData.isActive ? 'bg-green-500' : 'bg-gray-600'
+              }`}
           >
             <span
-              className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 ease-in-out ${
-                formData.isActive ? 'transform translate-x-6' : ''
-              }`}
+              className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 ease-in-out ${formData.isActive ? 'transform translate-x-6' : ''
+                }`}
             />
           </button>
           <span className="text-gray-300">Active</span>

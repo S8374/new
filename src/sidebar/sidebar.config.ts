@@ -21,20 +21,12 @@ export const SIDEBAR_CONFIG: SidebarSection[] = [
     title: "Admin Panel",
     roles: ["ADMIN"],
     items: [
+
       {
-        title: "Dashboard",
-        url: "/users/overview",
-        icon: LayoutDashboard,
-      },
-      {
-        title: "Messaging",
+        title: "Marquee",
         icon: MessageCircle,
         items: [
-          { title: "Send SMS", url: "/admin/messaging/sms", icon: Mail },
-          { title: "Campaign", url: "/admin/messaging/campaign", icon: Zap },
-          { title: "Send Using File", url: "/admin/messaging/file", icon: Folder },
-          { title: "Sender ID", url: "/admin/messaging/sender-id", icon: Settings },
-          { title: "Non Masking ID", url: "/admin/messaging/non-masking", icon: Shield },
+          { title: "Marquee Handel", url: "/admin/marquee", icon: Mail },
         ],
       },
       {
@@ -45,40 +37,7 @@ export const SIDEBAR_CONFIG: SidebarSection[] = [
           { title: "Add Slider Type", url: "/admin/add-slider-type", icon: Users },
           { title: "Add Slider", url: "/admin/sliders", icon: Users },
         ],
-      },
-      {
-        title: "Templates",
-        url: "/admin/templates",
-        icon: FileText,
-      },
-      {
-        title: "Blacklist",
-        url: "/admin/blacklist",
-        icon: Shield,
-      },
-      {
-        title: "Chat Box",
-        url: "/admin/chatbox",
-        icon: MessageCircle,
-      },
-      {
-        title: "Reports",
-        icon: BarChart3,
-        items: [
-          { title: "Usage", url: "/admin/reports/usage", icon: Zap },
-          { title: "Delivery", url: "/admin/reports/delivery", icon: Mail },
-          { title: "Errors", url: "/admin/reports/errors", icon: Shield },
-        ],
-      },
-      {
-        title: "Developer / API",
-        icon: Code,
-        items: [
-          { title: "API Keys", url: "/admin/api/keys", icon: Key },
-          { title: "Webhooks", url: "/admin/api/webhooks", icon: Zap },
-          { title: "Documentation", url: "/admin/api/docs", icon: FileText },
-        ],
-      },
+      }
     ],
   }
   ,
