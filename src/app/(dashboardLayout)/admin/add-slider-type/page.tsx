@@ -10,7 +10,7 @@ import { uploadImageToImageBB } from "@/lib/imageUpload";
 import toast from "react-hot-toast";
 import { ArrowLeft, Link2, Upload } from "lucide-react";
 
-export default function CreateSliderTypePage() {
+const CreateSliderTypePage = () => {
   const router = useRouter();
   const [formData, setFormData] = useState({
     name: "",
@@ -241,3 +241,5 @@ export default function CreateSliderTypePage() {
     </div>
   );
 }
+
+export default CreateSliderTypePage;

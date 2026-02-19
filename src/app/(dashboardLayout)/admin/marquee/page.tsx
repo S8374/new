@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { marqueeService, Marquee } from "@/services/api/marquee.service";
 import { Pencil, Trash2, Eye, EyeOff, ArrowUp, ArrowDown, Plus, X } from "lucide-react";
 
-export default function MarqueeAdmin() {
+const MarqueeAdmin = () => {
   const [marquees, setMarquees] = useState<Marquee[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -432,3 +432,5 @@ export default function MarqueeAdmin() {
     </div>
   );
 }
+
+export default MarqueeAdmin;

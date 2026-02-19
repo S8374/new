@@ -2,7 +2,6 @@
 
 import { BellIcon, ChevronDownIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-//import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,17 +32,8 @@ export default function DashboardHeader() {
           <BellIcon size={18} />
         </Button>
 
-        {/* Balance */}
-        <div className="flex flex-col border-l pl-4  leading-tight">
-          <span className="text-xs text-gray-300">Balance</span>
-          <span className="font-semibold text-green-400">৳ 20,000.00</span>
-        </div>
-
-        {/* Recharge Button */}
-        <Button className="h-8 px-4  bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md">
-          Recharge
-        </Button>
-
+      
+    
         {/* User Profile */}
         {/* <div className="flex items-center gap-3 border-l border-white/20 pl-4">
           <div className="text-right leading-tight">

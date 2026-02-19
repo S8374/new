@@ -10,7 +10,7 @@ import { sliderTypeService } from "@/services/api/slider.types";
 import { uploadImageToImageBB } from "@/lib/imageUpload";
 import { ArrowLeft, Link2, Upload } from "lucide-react";
 
-export default function CreateSliderPage() {
+const CreateSliderPage =  () => {
   const router = useRouter();
   const [sliderTypes, setSliderTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -359,3 +359,5 @@ export default function CreateSliderPage() {
     </div>
   );
 }
+
+export default CreateSliderPage;

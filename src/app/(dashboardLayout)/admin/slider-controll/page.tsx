@@ -9,7 +9,7 @@ import toast from "react-hot-toast";
 import { Edit, Eye, FileChartLine, FileCheck2, FileEdit, FileImage, FileKey2Icon, FilePlus, FileType, FileType2Icon, FileTypeIcon, Plus, Trash, Type } from "lucide-react";
 
 
-export default function SliderManagementPage() {
+const SliderManagementPage = () => {
     const [typesWithSliders, setTypesWithSliders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set());
@@ -326,3 +326,5 @@ export default function SliderManagementPage() {
         </div>
     );
 }
+
+export default SliderManagementPage;
