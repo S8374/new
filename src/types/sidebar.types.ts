@@ -2,6 +2,7 @@
 import { LucideIcon } from "lucide-react";
 
 export interface SidebarItem {
+  badge: any;
   title: string;
   url?: string;
    icon?: LucideIcon;   // ✅ FIX HER; // Lucide icon component
