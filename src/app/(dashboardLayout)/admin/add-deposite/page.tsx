@@ -1,191 +1,972 @@
-// app/admin/payment-methods/manage/page.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { 
+  Plus, 
+  Edit, 
+  Trash2, 
+  Power, 
+  CreditCard,
+  BookOpen,
+  FileText,
+  X
+} from "lucide-react";
+import { depositService } from "@/services/api/deposit.service";
 
-export default function ManageDepositPaymentMethodsPage() {
-  const [formData, setFormData] = useState({
-    methodNameEn: "",
-    methodNameBn: "",
-    agentWalletNumber: "",
-    agentWalletText: "",
-    methodImage: null as File | null,
-    paymentPageImage: null as File | null,
-    // You can add more fields like textColor, bgColor, gateways later
+type TabType = 'manual' | 'auto' | 'crypto';
+
+interface PaymentMethod {
+  _id: string;
+  name: string;
+  slug: string;
+  icon: string;
+  tab: TabType;
+  description?: string;
+  order: number;
+  isActive: boolean;
+}
+
+interface Instruction {
+  _id: string;
+  step: number;
+  text: string;
+  tab: TabType;
+  isActive: boolean;
+}
+
+interface FormField {
+  _id: string;
+  label: string;
+  name: string;
+  tab: TabType;
+  type: 'text' | 'number' | 'textarea'|'screenshot';
+  placeholder?: string;
+  required: boolean;
+  order: number;
+  paymentMethodId?: string;
+  isActive: boolean;
+}
+
+export default function DepositManagement() {
+  const [activeTab, setActiveTab] = useState<TabType>('manual');
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [instructions, setInstructions] = useState<Instruction[]>([]);
+  const [formFields, setFormFields] = useState<FormField[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Modal states
+  const [showMethodModal, setShowMethodModal] = useState(false);
+  const [showInstructionModal, setShowInstructionModal] = useState(false);
+  const [showFieldModal, setShowFieldModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
+  
+  // Form states
+  const [methodForm, setMethodForm] = useState({
+    name: '',
+    slug: '',
+    icon: '',
+    description: '',
+    order: 0,
+    isActive: true
   });
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  const [instructionForm, setInstructionForm] = useState({
+    step: 1,
+    text: '',
+    isActive: true
+  });
+
+  const [fieldForm, setFieldForm] = useState({
+    label: '',
+    name: '',
+    type: 'text' as const,
+    placeholder: '',
+    required: false,
+    order: 0,
+    paymentMethodId: undefined as string | undefined, // Changed to undefined instead of empty string
+    isActive: true
+  });
+
+  // Fetch data based on active tab
+  useEffect(() => {
+    fetchData();
+  }, [activeTab]);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch payment methods for this tab
+      const methodsRes = await depositService.getPaymentMethodByTab(activeTab);
+      if (methodsRes?.success) {
+        setPaymentMethods(methodsRes.data || []);
+      }
+
+      // Fetch instructions for this tab
+      const instructionsRes = await depositService.getInstructionsByTab(activeTab);
+      if (instructionsRes?.success) {
+        setInstructions(instructionsRes.data || []);
+      }
+
+      // Fetch form fields for this tab
+      const fieldsRes = await depositService.getFormFieldsByTab(activeTab);
+      if (fieldsRes?.success) {
+        setFormFields(fieldsRes.data || []);
+      }
+
+    } catch (error) {
+      console.error("Failed to fetch data:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: keyof typeof formData) => {
-    const file = e.target.files?.[0] || null;
-    setFormData((prev) => ({ ...prev, [field]: file }));
+  // ========== PAYMENT METHOD HANDLERS ==========
+  const handleCreateMethod = async () => {
+    try {
+      await depositService.createPaymentMethod({
+        ...methodForm,
+        tab: activeTab,
+        slug: methodForm.slug || methodForm.name.toLowerCase().replace(/\s+/g, '-')
+      });
+      setShowMethodModal(false);
+      resetMethodForm();
+      fetchData();
+    } catch (error) {
+      console.error("Error creating payment method:", error);
+      alert("Failed to create payment method");
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Form submitted:", formData);
-    // TODO: Integrate with API / server action
+  const handleUpdateMethod = async () => {
+    if (!editingItem) return;
+    try {
+      await depositService.updatePaymentMethod(editingItem._id, methodForm);
+      setShowMethodModal(false);
+      setEditingItem(null);
+      resetMethodForm();
+      fetchData();
+    } catch (error) {
+      console.error("Error updating payment method:", error);
+      alert("Failed to update payment method");
+    }
   };
+
+  const handleDeleteMethod = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this payment method?")) return;
+    try {
+      await depositService.deletePaymentMethod(id);
+      fetchData();
+    } catch (error) {
+      console.error("Error deleting payment method:", error);
+      alert("Failed to delete payment method");
+    }
+  };
+
+  const handleToggleMethodActive = async (method: PaymentMethod) => {
+    try {
+      await depositService.updatePaymentMethod(method._id, {
+        isActive: !method.isActive
+      });
+      fetchData();
+    } catch (error) {
+      console.error("Error toggling method status:", error);
+      alert("Failed to update method status");
+    }
+  };
+
+  // ========== INSTRUCTION HANDLERS ==========
+  const handleCreateInstruction = async () => {
+    try {
+      await depositService.createInstruction({
+        ...instructionForm,
+        tab: activeTab
+      });
+      setShowInstructionModal(false);
+      resetInstructionForm();
+      fetchData();
+    } catch (error) {
+      console.error("Error creating instruction:", error);
+      alert("Failed to create instruction");
+    }
+  };
+
+  const handleUpdateInstruction = async () => {
+    if (!editingItem) return;
+    try {
+      await depositService.updateInstruction(editingItem._id, instructionForm);
+      setShowInstructionModal(false);
+      setEditingItem(null);
+      resetInstructionForm();
+      fetchData();
+    } catch (error) {
+      console.error("Error updating instruction:", error);
+      alert("Failed to update instruction");
+    }
+  };
+
+  const handleDeleteInstruction = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this instruction?")) return;
+    try {
+      await depositService.deleteInstruction(id);
+      fetchData();
+    } catch (error) {
+      console.error("Error deleting instruction:", error);
+      alert("Failed to delete instruction");
+    }
+  };
+
+  const handleToggleInstructionActive = async (instruction: Instruction) => {
+    try {
+      await depositService.updateInstruction(instruction._id, {
+        isActive: !instruction.isActive
+      });
+      fetchData();
+    } catch (error) {
+      console.error("Error toggling instruction status:", error);
+      alert("Failed to update instruction status");
+    }
+  };
+
+  // ========== FORM FIELD HANDLERS ==========
+  const handleCreateField = async () => {
+    try {
+      // Remove paymentMethodId if it's empty or undefined
+      const fieldData: any = {
+        label: fieldForm.label,
+        name: fieldForm.name,
+        tab: activeTab,
+        type: fieldForm.type,
+        placeholder: fieldForm.placeholder,
+        required: fieldForm.required,
+        order: fieldForm.order,
+        isActive: fieldForm.isActive
+      };
+
+      // Only include paymentMethodId if it has a value
+      if (fieldForm.paymentMethodId && fieldForm.paymentMethodId.trim() !== '') {
+        fieldData.paymentMethodId = fieldForm.paymentMethodId;
+      }
+
+      await depositService.createFormField(fieldData);
+      setShowFieldModal(false);
+      resetFieldForm();
+      fetchData();
+    } catch (error) {
+      console.error("Error creating form field:", error);
+      alert("Failed to create form field");
+    }
+  };
+
+  const handleUpdateField = async () => {
+    if (!editingItem) return;
+    try {
+      // Remove paymentMethodId if it's empty or undefined
+      const fieldData: any = {
+        label: fieldForm.label,
+        name: fieldForm.name,
+        type: fieldForm.type,
+        placeholder: fieldForm.placeholder,
+        required: fieldForm.required,
+        order: fieldForm.order,
+        isActive: fieldForm.isActive
+      };
+
+      // Only include paymentMethodId if it has a value
+      if (fieldForm.paymentMethodId && fieldForm.paymentMethodId.trim() !== '') {
+        fieldData.paymentMethodId = fieldForm.paymentMethodId;
+      }
+
+      await depositService.updateFormField(editingItem._id, fieldData);
+      setShowFieldModal(false);
+      setEditingItem(null);
+      resetFieldForm();
+      fetchData();
+    } catch (error) {
+      console.error("Error updating form field:", error);
+      alert("Failed to update form field");
+    }
+  };
+
+  const handleDeleteField = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this form field?")) return;
+    try {
+      await depositService.deleteFormField(id);
+      fetchData();
+    } catch (error) {
+      console.error("Error deleting form field:", error);
+      alert("Failed to delete form field");
+    }
+  };
+
+  const handleToggleFieldActive = async (field: FormField) => {
+    try {
+      await depositService.updateFormField(field._id, {
+        isActive: !field.isActive
+      });
+      fetchData();
+    } catch (error) {
+      console.error("Error toggling field status:", error);
+      alert("Failed to update field status");
+    }
+  };
+
+  // ========== UTILITY FUNCTIONS ==========
+  const resetMethodForm = () => {
+    setMethodForm({
+      name: '',
+      slug: '',
+      icon: '',
+      description: '',
+      order: 0,
+      isActive: true
+    });
+  };
+
+  const resetInstructionForm = () => {
+    setInstructionForm({
+      step: instructions.length + 1,
+      text: '',
+      isActive: true
+    });
+  };
+
+  const resetFieldForm = () => {
+    setFieldForm({
+      label: '',
+      name: '',
+      type: 'text',
+      placeholder: '',
+      required: false,
+      order: formFields.length,
+      paymentMethodId: undefined, // Set to undefined instead of empty string
+      isActive: true
+    });
+  };
+
+  const openEditMethod = (method: PaymentMethod) => {
+    setEditingItem(method);
+    setMethodForm({
+      name: method.name,
+      slug: method.slug,
+      icon: method.icon,
+      description: method.description || '',
+      order: method.order,
+      isActive: method.isActive
+    });
+    setShowMethodModal(true);
+  };
+
+  const openEditInstruction = (instruction: Instruction) => {
+    setEditingItem(instruction);
+    setInstructionForm({
+      step: instruction.step,
+      text: instruction.text,
+      isActive: instruction.isActive
+    });
+    setShowInstructionModal(true);
+  };
+
+  const openEditField = (field: FormField) => {
+    setEditingItem(field);
+    setFieldForm({
+      label: field.label,
+      name: field.name,
+      type: field.type,
+      placeholder: field.placeholder || '',
+      required: field.required,
+      order: field.order,
+      paymentMethodId: field.paymentMethodId, // Keep as is, could be undefined
+      isActive: field.isActive
+    });
+    setShowFieldModal(true);
+  };
+
+  const tabLabels = {
+    manual: "BDT - Manual",
+    auto: "Auto Deposit",
+    crypto: "Crypto Deposit"
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-white">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 p-6">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-white mb-8 text-center">
-          Manage Deposit Payment Methods
-        </h1>
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <h1 className="text-2xl font-bold text-white mb-6">Deposit Management</h1>
 
-        <form onSubmit={handleSubmit} className="bg-gray-800 rounded-xl p-6 shadow-xl border border-gray-700">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div>
-              <label className="block text-teal-400 text-sm font-medium mb-2">
-                Method Name (English)
-              </label>
-              <input
-                type="text"
-                name="methodNameEn"
-                value={formData.methodNameEn}
-                onChange={handleChange}
-                className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                placeholder="e.g., bKash"
-              />
+        {/* Tab Navigation */}
+        <div className="px-4 pt-5 pb-3 bg-gray-800 rounded-t-lg">
+          <div className="grid grid-cols-3 gap-2 bg-[#252334] rounded-xl p-1.5 border border-gray-800/60">
+            {(Object.keys(tabLabels) as TabType[]).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`py-3 text-sm font-semibold rounded-lg transition-all ${
+                  activeTab === tab
+                    ? "bg-gradient-to-r from-red-600 to-red-500 text-white shadow-md"
+                    : "text-gray-400 hover:text-white hover:bg-black/30"
+                }`}
+              >
+                {tabLabels[tab]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Content Sections */}
+        <div className="bg-gray-800 rounded-b-lg p-6 space-y-8">
+          {/* Payment Methods Section */}
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                <CreditCard className="w-5 h-5" />
+                Payment Methods
+              </h2>
+              <button
+                onClick={() => {
+                  setEditingItem(null);
+                  resetMethodForm();
+                  setShowMethodModal(true);
+                }}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+              >
+                <Plus className="w-4 h-4" />
+                Add Method
+              </button>
             </div>
 
-            <div>
-              <label className="block text-teal-400 text-sm font-medium mb-2">
-                Method Name (Bangla)
-              </label>
-              <input
-                type="text"
-                name="methodNameBn"
-                value={formData.methodNameBn}
-                onChange={handleChange}
-                className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                placeholder="যেমন: বিকাশ"
-              />
-            </div>
-
-            <div>
-              <label className="block text-teal-400 text-sm font-medium mb-2">
-                Agent Wallet Number
-              </label>
-              <input
-                type="text"
-                name="agentWalletNumber"
-                value={formData.agentWalletNumber}
-                onChange={handleChange}
-                className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                placeholder="e.g., 017XXXXXXXX"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {paymentMethods.map((method) => (
+                <div
+                  key={method._id}
+                  className="bg-gray-700 rounded-lg p-4 border border-gray-600"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      {method.icon && (
+                        <img src={method.icon} alt={method.name} className="w-10 h-10 rounded" />
+                      )}
+                      <div>
+                        <h3 className="text-white font-semibold">{method.name}</h3>
+                        <p className="text-sm text-gray-400">Slug: {method.slug}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleToggleMethodActive(method)}
+                        className={`p-2 rounded-lg ${
+                          method.isActive ? 'bg-green-600' : 'bg-gray-600'
+                        }`}
+                      >
+                        <Power className="w-4 h-4 text-white" />
+                      </button>
+                      <button
+                        onClick={() => openEditMethod(method)}
+                        className="p-2 bg-blue-600 rounded-lg"
+                      >
+                        <Edit className="w-4 h-4 text-white" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteMethod(method._id)}
+                        className="p-2 bg-red-600 rounded-lg"
+                      >
+                        <Trash2 className="w-4 h-4 text-white" />
+                      </button>
+                    </div>
+                  </div>
+                  {method.description && (
+                    <p className="text-gray-300 text-sm mt-2">{method.description}</p>
+                  )}
+                  <p className="text-xs text-gray-400 mt-2">Order: {method.order}</p>
+                </div>
+              ))}
+              {paymentMethods.length === 0 && (
+                <p className="text-gray-400 col-span-2 text-center py-8">
+                  No payment methods for {tabLabels[activeTab]}
+                </p>
+              )}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div>
-              <label className="block text-teal-400 text-sm font-medium mb-2">
-                Agent Wallet Text
-              </label>
-              <textarea
-                name="agentWalletText"
-                value={formData.agentWalletText}
-                onChange={handleChange}
-                rows={3}
-                className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
-                placeholder="Instructions or notes for users (e.g., 'Send money to this number')"
-              />
+          {/* Instructions Section */}
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                <BookOpen className="w-5 h-5" />
+                Instructions
+              </h2>
+              <button
+                onClick={() => {
+                  setEditingItem(null);
+                  resetInstructionForm();
+                  setShowInstructionModal(true);
+                }}
+                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+              >
+                <Plus className="w-4 h-4" />
+                Add Instruction
+              </button>
             </div>
 
-            <div>
-              <label className="block text-teal-400 text-sm font-medium mb-2">
-                Method Image
-              </label>
-              <div className="flex items-center">
-                <label className="flex-1 cursor-pointer px-4 py-3 bg-teal-700 hover:bg-teal-600 text-white rounded-lg text-center transition-colors flex items-center justify-center gap-2">
-                  <span>Choose File</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleFileChange(e, "methodImage")}
-                    className="hidden"
-                  />
-                </label>
-                <span className="ml-3 text-gray-400 text-sm truncate max-w-[150px]">
-                  {formData.methodImage ? formData.methodImage.name : "No file chosen"}
-                </span>
-              </div>
+            <div className="space-y-3">
+              {instructions.sort((a, b) => a.step - b.step).map((instruction) => (
+                <div
+                  key={instruction._id}
+                  className="bg-gray-700 rounded-lg p-4 border border-gray-600 flex items-start justify-between"
+                >
+                  <div className="flex items-start gap-3 flex-1">
+                    <div className="bg-gray-600 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold">
+                      {instruction.step}
+                    </div>
+                    <p className="text-white flex-1">{instruction.text}</p>
+                  </div>
+                  <div className="flex gap-2 ml-4">
+                    <button
+                      onClick={() => handleToggleInstructionActive(instruction)}
+                      className={`p-2 rounded-lg ${
+                        instruction.isActive ? 'bg-green-600' : 'bg-gray-600'
+                      }`}
+                    >
+                      <Power className="w-4 h-4 text-white" />
+                    </button>
+                    <button
+                      onClick={() => openEditInstruction(instruction)}
+                      className="p-2 bg-blue-600 rounded-lg"
+                    >
+                      <Edit className="w-4 h-4 text-white" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteInstruction(instruction._id)}
+                      className="p-2 bg-red-600 rounded-lg"
+                    >
+                      <Trash2 className="w-4 h-4 text-white" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {instructions.length === 0 && (
+                <p className="text-gray-400 text-center py-4">
+                  No instructions for {tabLabels[activeTab]}
+                </p>
+              )}
             </div>
           </div>
 
-          <div className="mb-6">
-            <label className="block text-teal-400 text-sm font-medium mb-2">
-              Payment Page Image (optional)
-            </label>
-            <div className="flex items-center">
-              <label className="flex-1 cursor-pointer px-4 py-3 bg-teal-700 hover:bg-teal-600 text-white rounded-lg text-center transition-colors flex items-center justify-center gap-2">
-                <span>Choose File</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleFileChange(e, "paymentPageImage")}
-                  className="hidden"
-                />
-              </label>
-              <span className="ml-3 text-gray-400 text-sm truncate max-w-[150px]">
-                {formData.paymentPageImage ? formData.paymentPageImage.name : "No file chosen"}
-              </span>
+          {/* Form Fields Section */}
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Form Fields
+              </h2>
+              <button
+                onClick={() => {
+                  setEditingItem(null);
+                  resetFieldForm();
+                  setShowFieldModal(true);
+                }}
+                className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg"
+              >
+                <Plus className="w-4 h-4" />
+                Add Field
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {formFields.sort((a, b) => a.order - b.order).map((field) => (
+                <div
+                  key={field._id}
+                  className="bg-gray-700 rounded-lg p-4 border border-gray-600"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-white font-semibold">{field.label}</h3>
+                        <span className="text-xs bg-gray-600 px-2 py-1 rounded text-gray-300">
+                          {field.type}
+                        </span>
+                        {field.required && (
+                          <span className="text-xs bg-red-600 px-2 py-1 rounded text-white">
+                            Required
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-400 mt-1">Name: {field.name}</p>
+                      {field.placeholder && (
+                        <p className="text-sm text-gray-400">Placeholder: {field.placeholder}</p>
+                      )}
+                      {field.paymentMethodId && (
+                        <p className="text-xs text-blue-400 mt-1">
+                          Linked to Payment Method: {field.paymentMethodId}
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-500 mt-2">Order: {field.order}</p>
+                    </div>
+                    <div className="flex gap-2 ml-4">
+                      <button
+                        onClick={() => handleToggleFieldActive(field)}
+                        className={`p-2 rounded-lg ${
+                          field.isActive ? 'bg-green-600' : 'bg-gray-600'
+                        }`}
+                      >
+                        <Power className="w-4 h-4 text-white" />
+                      </button>
+                      <button
+                        onClick={() => openEditField(field)}
+                        className="p-2 bg-blue-600 rounded-lg"
+                      >
+                        <Edit className="w-4 h-4 text-white" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteField(field._id)}
+                        className="p-2 bg-red-600 rounded-lg"
+                      >
+                        <Trash2 className="w-4 h-4 text-white" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {formFields.length === 0 && (
+                <p className="text-gray-400 text-center py-4">
+                  No form fields for {tabLabels[activeTab]}
+                </p>
+              )}
             </div>
           </div>
-
-          {/* Optional: Add more sections (Gateways, Text Color, Background Color) below if needed */}
-          {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-            <div>
-              <label className="block text-teal-400 text-sm font-medium mb-2">Gateways</label>
-              <input
-                type="text"
-                className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                placeholder="Comma-separated gateway IDs"
-              />
-            </div>
-            <div>
-              <label className="block text-teal-400 text-sm font-medium mb-2">Text Color</label>
-              <input
-                type="color"
-                className="w-full h-10 rounded-lg border border-gray-700 bg-gray-900"
-                defaultValue="#26d3b2"
-              />
-            </div>
-          </div> */}
-
-          <div className="flex justify-end space-x-4 pt-4 border-t border-gray-700">
-            <button
-              type="button"
-              onClick={() => setFormData(initialState)}
-              className="px-5 py-2.5 text-gray-300 hover:text-white rounded-lg border border-gray-600 hover:bg-gray-700 transition"
-            >
-              Reset
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-2.5 bg-teal-600 hover:bg-teal-500 text-white font-medium rounded-lg transition focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 focus:ring-offset-gray-900"
-            >
-              Save Changes
-            </button>
-          </div>
-        </form>
+        </div>
       </div>
+
+      {/* Payment Method Modal */}
+      {showMethodModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">
+                {editingItem ? 'Edit Payment Method' : 'Add Payment Method'}
+              </h3>
+              <button onClick={() => setShowMethodModal(false)}>
+                <X className="w-5 h-5 text-gray-400 hover:text-white" />
+              </button>
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              editingItem ? handleUpdateMethod() : handleCreateMethod();
+            }} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Name *</label>
+                <input
+                  type="text"
+                  value={methodForm.name}
+                  onChange={(e) => setMethodForm({...methodForm, name: e.target.value})}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Slug</label>
+                <input
+                  type="text"
+                  value={methodForm.slug}
+                  onChange={(e) => setMethodForm({...methodForm, slug: e.target.value})}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                  placeholder="Auto-generated from name if empty"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Icon URL</label>
+                <input
+                  type="url"
+                  value={methodForm.icon}
+                  onChange={(e) => setMethodForm({...methodForm, icon: e.target.value})}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Description</label>
+                <textarea
+                  value={methodForm.description}
+                  onChange={(e) => setMethodForm({...methodForm, description: e.target.value})}
+                  rows={3}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Order</label>
+                <input
+                  type="number"
+                  value={methodForm.order}
+                  onChange={(e) => setMethodForm({...methodForm, order: parseInt(e.target.value) || 0})}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                />
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="methodActive"
+                  checked={methodForm.isActive}
+                  onChange={(e) => setMethodForm({...methodForm, isActive: e.target.checked})}
+                  className="h-4 w-4 text-blue-600 rounded bg-gray-700 border-gray-600"
+                />
+                <label htmlFor="methodActive" className="ml-2 text-sm text-gray-300">
+                  Active
+                </label>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowMethodModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                >
+                  {editingItem ? 'Update' : 'Create'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Instruction Modal */}
+      {showInstructionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">
+                {editingItem ? 'Edit Instruction' : 'Add Instruction'}
+              </h3>
+              <button onClick={() => setShowInstructionModal(false)}>
+                <X className="w-5 h-5 text-gray-400 hover:text-white" />
+              </button>
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              editingItem ? handleUpdateInstruction() : handleCreateInstruction();
+            }} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Step Number *</label>
+                <input
+                  type="number"
+                  value={instructionForm.step}
+                  onChange={(e) => setInstructionForm({...instructionForm, step: parseInt(e.target.value) || 1})}
+                  min="1"
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Instruction Text *</label>
+                <textarea
+                  value={instructionForm.text}
+                  onChange={(e) => setInstructionForm({...instructionForm, text: e.target.value})}
+                  rows={3}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                  required
+                />
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="instructionActive"
+                  checked={instructionForm.isActive}
+                  onChange={(e) => setInstructionForm({...instructionForm, isActive: e.target.checked})}
+                  className="h-4 w-4 text-blue-600 rounded bg-gray-700 border-gray-600"
+                />
+                <label htmlFor="instructionActive" className="ml-2 text-sm text-gray-300">
+                  Active
+                </label>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowInstructionModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
+                >
+                  {editingItem ? 'Update' : 'Create'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Form Field Modal */}
+      {showFieldModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">
+                {editingItem ? 'Edit Form Field' : 'Add Form Field'}
+              </h3>
+              <button onClick={() => setShowFieldModal(false)}>
+                <X className="w-5 h-5 text-gray-400 hover:text-white" />
+              </button>
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              editingItem ? handleUpdateField() : handleCreateField();
+            }} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Label *</label>
+                <input
+                  type="text"
+                  value={fieldForm.label}
+                  onChange={(e) => setFieldForm({...fieldForm, label: e.target.value})}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                  placeholder="e.g., Amount"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Field Name *</label>
+                <input
+                  type="text"
+                  value={fieldForm.name}
+                  onChange={(e) => setFieldForm({...fieldForm, name: e.target.value})}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                  placeholder="e.g., amount"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Field Type *</label>
+                <select
+                  value={fieldForm.type}
+                  onChange={(e) => setFieldForm({...fieldForm, type: e.target.value as any})}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                  required
+                >
+                  <option value="text">Text</option>
+                  <option value="number">Number</option>
+                  <option value="textarea">Textarea</option>
+                  <option value="screenshot">Screenshot</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Placeholder</label>
+                <input
+                  type="text"
+                  value={fieldForm.placeholder}
+                  onChange={(e) => setFieldForm({...fieldForm, placeholder: e.target.value})}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Order</label>
+                <input
+                  type="number"
+                  value={fieldForm.order}
+                  onChange={(e) => setFieldForm({...fieldForm, order: parseInt(e.target.value) || 0})}
+                  min="0"
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                />
+              </div>
+
+              {/* Payment Method Selection - Only show if there are payment methods */}
+              {paymentMethods.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                    Link to Payment Method (Optional)
+                  </label>
+                  <select
+                    value={fieldForm.paymentMethodId || ''}
+                    onChange={(e) => setFieldForm({
+                      ...fieldForm, 
+                      paymentMethodId: e.target.value || undefined
+                    })}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                  >
+                    <option value="">None</option>
+                    {paymentMethods.map((method) => (
+                      <option key={method._id} value={method._id}>
+                        {method.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="fieldRequired"
+                  checked={fieldForm.required}
+                  onChange={(e) => setFieldForm({...fieldForm, required: e.target.checked})}
+                  className="h-4 w-4 text-blue-600 rounded bg-gray-700 border-gray-600"
+                />
+                <label htmlFor="fieldRequired" className="ml-2 text-sm text-gray-300">
+                  Required Field
+                </label>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="fieldActive"
+                  checked={fieldForm.isActive}
+                  onChange={(e) => setFieldForm({...fieldForm, isActive: e.target.checked})}
+                  className="h-4 w-4 text-blue-600 rounded bg-gray-700 border-gray-600"
+                />
+                <label htmlFor="fieldActive" className="ml-2 text-sm text-gray-300">
+                  Active
+                </label>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowFieldModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-600 rounded-lg text-gray-300 hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg"
+                >
+                  {editingItem ? 'Update' : 'Create'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-const initialState = {
-  methodNameEn: "",
-  methodNameBn: "",
-  agentWalletNumber: "",
-  agentWalletText: "",
-  methodImage: null,
-  paymentPageImage: null,
-};
