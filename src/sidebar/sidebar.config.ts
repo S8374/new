@@ -15,6 +15,7 @@ import {
   PilcrowLeft,
   Settings2,
   SquarePlus,
+  User,
 } from "lucide-react";
 
 export const SIDEBAR_CONFIG: SidebarSection[] = [
@@ -39,11 +40,18 @@ export const SIDEBAR_CONFIG: SidebarSection[] = [
           { title: "Add Slider", url: "/admin/sliders", icon: SquarePlus },
         ],
       },
-        {
+      {
         title: "Deposite",
         icon: PilcrowLeft,
         items: [
           { title: "Deposite Handel", url: "/admin/add-deposite", icon: Settings },
+        ],
+      },
+      {
+        title: "User",
+        icon: User,
+        items: [
+          { title: "User Handel", url: "/admin/controll-user", icon: Settings },
         ],
       },
     ],
