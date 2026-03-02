@@ -21,7 +21,7 @@ import {
 export const SIDEBAR_CONFIG: SidebarSection[] = [
   {
     title: "Admin Panel",
-    roles: ["ADMIN"],
+    roles: ["SUPER_ADMIN"],
     items: [
 
       {

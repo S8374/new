@@ -23,7 +23,7 @@ export const authService = {
     return response?.data;
   },
   async logout(data: any): Promise<any> {
-    const response = await api.get("/auth/logout", data);
+    const response = await api.post("/auth/logout", data);
     return response?.data;
   },
 };

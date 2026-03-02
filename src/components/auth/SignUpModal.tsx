@@ -10,9 +10,10 @@ import toast from "react-hot-toast";
 interface SignUpModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onRegisterSuccess: () => void; // ✅ ADD THIS
 }
 
-export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
+export default function SignUpModal({ isOpen, onClose ,  onRegisterSuccess}: SignUpModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -49,36 +50,42 @@ export default function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
 
   if (!isOpen) return null;
 
-  const handleRegister = async () => {
-    if (!name || !password || !confirmPassword) {
-      return toast.error("All fields are required");
-    }
-    if (password !== confirmPassword) {
-      return toast.error("Passwords do not match");
-    }
-    if (!imHuman) {
-      return toast.error("Please verify you are human");
+const handleRegister = async () => {
+  if (!name || !password || !confirmPassword) {
+    return toast.error("All fields are required");
+  }
+
+  if (password !== confirmPassword) {
+    return toast.error("Passwords do not match");
+  }
+
+  if (!imHuman) {
+    return toast.error("Please verify you are human");
+  }
+
+  try {
+    setLoading(true);
+
+    const res = await authService.register({
+      name,
+      password,
+      referralCode,
+      imHuman: true,
+    });
+
+    if (res?.success) {
+      onRegisterSuccess(); // 🔥 update Header instantly
+      toast.success("Registration successful 🎉");
+      onClose();
+      router.push("/deposit");
     }
 
-    try {
-      setLoading(true);
-      console.log("data",name,password , imHuman ,referralCode);
-      const res =   await authService.register({
-        name,
-        password,
-        referralCode,
-        imHuman: true,
-      });
-      console.log("reponse", res);
-      toast.success("Registration successful 🎉");
-      router.push("/deposit")
-      onClose();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Registration failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+  } catch (error: any) {
+    toast.error(error?.response?.data?.message || "Registration failed");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">

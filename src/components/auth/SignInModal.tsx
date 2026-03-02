@@ -10,9 +10,12 @@ import { useRouter } from "next/navigation";
 interface SignInModalProps {
   isOpen: boolean;
   onClose: () => void;
+    onLoginSuccess: () => void; // ✅ ADD THIS
+
 }
 
-export default function SignInModal({ isOpen, onClose }: SignInModalProps) {
+export default function SignInModal({ isOpen, onClose,  onLoginSuccess
+ }: SignInModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const [username, setUsername] = useState("");
@@ -48,27 +51,33 @@ export default function SignInModal({ isOpen, onClose }: SignInModalProps) {
 
   if (!isOpen) return null;
 
-  const handleLogin = async () => {
-    if (!username || !password) return toast.error("All fields are required");
-    if (!imHuman) return toast.error("Please verify you are human");
+const handleLogin = async () => {
+  if (!username || !password)
+    return toast.error("All fields are required");
+  if (!imHuman)
+    return toast.error("Please verify you are human");
 
-    try {
-      setLoading(true);
-      const res = await authService.login({ 
-        identifier: username, 
-        password, 
-        imHuman 
-      });
-      toast.success("Login successful 🎉");
+  try {
+    setLoading(true);
+
+    const res = await authService.login({
+      identifier: username,
+      password,
+      imHuman,
+    });
+
+    if (res?.success) {
+      onLoginSuccess();  // 🔥 THIS updates Header instantly
       onClose();
-      router.push("/deposit")
-      console.log("Logged in user:", res);
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Login failed");
-    } finally {
-      setLoading(false);
+      router.push("/deposit");
+      toast.success("Login successful 🎉");
     }
-  };
+  } catch (err: any) {
+    toast.error(err?.response?.data?.message || "Login failed");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @next/next/no-img-element */
 "use client";
+import { authService } from "@/services/api/auth.services";
 import {
   Wallet,
   ArrowDownToLine,
@@ -19,8 +20,26 @@ import {
   GamepadDirectional,
 } from "lucide-react";
 import Link from "next/link";
-
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 export default function ProfileWallet() {
+  const router = useRouter();
+  const handleLogout = async () => {
+    try {
+      await authService.logout(undefined);
+
+      toast.success("Logged out successfully 👋");
+
+      // optional redirect
+      router.push("/");
+
+      // 🔥 Force header refresh without page reload
+      window.location.reload();
+
+    } catch (error) {
+      toast.error("Logout failed");
+    }
+  };
   return (
     <div>
       <div style={{
@@ -91,13 +110,13 @@ export default function ProfileWallet() {
 
           {/* Menu Grid */}
           <div className="grid grid-cols-4 gap-4 mt-5 text-center text-xs">
-            <MenuItem icon={<FileText />} label="Balance Det" href="/balance-det"  />
+            <MenuItem icon={<FileText />} label="Balance Det" href="/balance-det" />
             <MenuItem icon={<BarChart3 />} label="Profit Report" href="profit-report" />
             <MenuItem icon={<Repeat />} label="Transaction" href="transaction-record" />
             <MenuItem icon={<ClipboardList />} label="Task" href="tasks" />
             <MenuItem icon={<Coins />} label="My Bets" href="" />
-            <MenuItem icon={<Bitcoin />} label="Buy Crypto" href=""/>
-            <MenuItem icon={<Gift />} label="LuckyWheel" href=""/>
+            <MenuItem icon={<Bitcoin />} label="Buy Crypto" href="" />
+            <MenuItem icon={<Gift />} label="LuckyWheel" href="" />
           </div>
         </div>
 
@@ -131,19 +150,26 @@ export default function ProfileWallet() {
 
 
         </div>
-
+        <div className="text-center mt-4 flex justify-center">
+          <div
+            onClick={handleLogout}
+            className="text-red-500 cursor-pointer font-semibold"
+          >
+            Log Out
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
 /* Reusable Components */
-const MenuItem = ({ icon, label ,href}: any) => (
+const MenuItem = ({ icon, label, href }: any) => (
   <Link href={href}>
     <div className="flex flex-col  cursor-pointer items-center gap-1 text-gray-200">
-    <div className="text-background">{icon}</div>
-    <span>{label}</span>
-  </div>
+      <div className="text-background">{icon}</div>
+      <span>{label}</span>
+    </div>
   </Link>
 
 );

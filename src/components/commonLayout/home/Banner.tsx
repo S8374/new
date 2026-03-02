@@ -114,7 +114,7 @@ export default function Banner() {
           pagination={{ clickable: true }}
           navigation
           modules={[Parallax, Pagination, Navigation, Autoplay]}
-          className="w-full h-[20vh] "
+          className="w-full h-[30vh] "
         >
           {slides.map((slide) => (
             <SwiperSlide key={slide._id}>

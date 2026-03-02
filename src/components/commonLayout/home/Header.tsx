@@ -14,39 +14,30 @@ const Header = () => {
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
   const [isSignUpOpen, setIsSignUpOpen] = useState(false);
-  
+
   // ── Auth state ────────────────────────────────────────
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // ✅ Only ONE fetchUser function
+  const fetchUser = async () => {
+    try {
+      setLoading(true);
+      const response = await authService.me(undefined);
+      setUser(response?.data || null);
+    } catch {
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Run once on mount
   useEffect(() => {
-    let mounted = true;
-
-    const fetchUser = async () => {
-      try {
-        setLoading(true);
-        const response = await authService.me(undefined); 
-        console.log(response)
-        if (mounted) {
-          setUser(response?.data || null);
-        }
-      } catch (err) {
-        console.error("Failed to fetch user", err);
-        if (mounted) setUser(null);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
     fetchUser();
-
-    return () => {
-      mounted = false;
-    };
   }, []);
-
   // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -130,11 +121,10 @@ const Header = () => {
                         setSelectedLang(lang);
                         setIsLanguageOpen(false);
                       }}
-                      className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm transition ${
-                        selectedLang.code === lang.code
+                      className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm transition ${selectedLang.code === lang.code
                           ? "bg-accent font-medium"
                           : "hover:bg-accent/60"
-                      }`}
+                        }`}
                     >
                       <span className="text-xl">{lang.flag}</span>
                       <span>{lang.name}</span>
@@ -147,8 +137,17 @@ const Header = () => {
         </div>
       </header>
 
-      <SignInModal isOpen={isSignInOpen} onClose={() => setIsSignInOpen(false)} />
-      <SignUpModal isOpen={isSignUpOpen} onClose={() => setIsSignUpOpen(false)} />
+{/* ✅ Pass fetchUser */}
+      <SignInModal
+        isOpen={isSignInOpen}
+        onClose={() => setIsSignInOpen(false)}
+        onLoginSuccess={fetchUser}
+      />
+     <SignUpModal
+  isOpen={isSignUpOpen}
+  onClose={() => setIsSignUpOpen(false)}
+  onRegisterSuccess={fetchUser}   // ✅ ADD THIS
+/>
     </>
   );
 };

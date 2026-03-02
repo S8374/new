@@ -3,6 +3,7 @@ import { Poppins } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 
 import "./globals.css";
+import { AuthProvider } from "@/context/AuthContext";
 
 // Load Poppins font
 const poppins = Poppins({
@@ -26,9 +27,10 @@ export default function RootLayout({
       <body
         className={`${poppins.variable} font-sans antialiased bg-background text-foreground`}
       >
+        <AuthProvider>
         {children}
-          <Toaster position="top-right" reverseOrder={false} />
-
+        </AuthProvider>
+        <Toaster position="top-right" reverseOrder={false} />
       </body>
     </html>
   );
