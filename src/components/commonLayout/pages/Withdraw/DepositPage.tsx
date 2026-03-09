@@ -7,12 +7,12 @@ import {
   Upload,
   AlertCircle,
   CheckCircle,
-  Clock,
   XCircle,
   Gift,
   Percent,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  ClipboardClock 
 } from "lucide-react";
 import BackButton from "@/components/ui/BackButton";
 import { depositService } from "@/services/api/deposit.service";
@@ -59,15 +59,20 @@ export default function DepositPage() {
   const [copied, setCopied] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
+  const [showPromoDetails, setShowPromoDetails] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [submittedRequest, setSubmittedRequest] = useState<any>(null);
   const [uploadedFileUrl, setUploadedFileUrl] = useState<string>("");
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
+  const [minDepositAmount, setMinDepositAmount] = useState<number | null>(null);
+  const [amountFieldName, setAmountFieldName] = useState<string>("");
+  const [amountField, setAmountField] = useState<FormField | null>(null);
 
   // Form state
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [calculatedBonus, setCalculatedBonus] = useState<number | null>(null);
+  const [amountError, setAmountError] = useState<string | null>(null);
 
   // Data from API
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
@@ -78,31 +83,103 @@ export default function DepositPage() {
 
   const walletAddress = "TEfuvvysBmXuUmBUxZGFM1J9a6LSVHGCP";
 
+  // Reset promotion selection when tab changes
+  useEffect(() => {
+    setSelectedPromotion(null);
+    setCalculatedBonus(null);
+    setMinDepositAmount(null);
+    setAmountError(null);
+    setSelectedMethod(null);
+    setUploadStatus('idle');
+    setUploadedFileUrl("");
+    setAmountFieldName("");
+    setAmountField(null);
+  }, [activeTab]);
+
   // Fetch data based on active tab
   useEffect(() => {
     fetchTabData();
   }, [activeTab]);
 
+  // Find the amount field whenever form fields change
+  useEffect(() => {
+    if (formFields.length > 0) {
+      console.log("Searching for amount field in:", formFields);
+      
+      // Try to find the amount field by checking common patterns
+      let foundField = null;
+      
+      // First try: look for field with type 'number' that might be for amount
+      const numberFields = formFields.filter(f => f.type === 'number');
+      if (numberFields.length === 1) {
+        // If there's exactly one number field, use that as amount
+        foundField = numberFields[0];
+        console.log("Found single number field, using as amount:", foundField);
+      } else {
+        // If multiple number fields, try to find by name/label patterns
+        foundField = formFields.find(f => 
+          f.name.toLowerCase().includes('amount') || 
+          f.label.toLowerCase().includes('amount') ||
+          f.name === 'Amount' ||
+          f.name === 'ammount' ||
+          f.name.toLowerCase() === 'amount' ||
+          f.label.toLowerCase().includes('enter amount') ||
+          f.label.toLowerCase().includes('your amount')
+        );
+      }
+      
+      if (foundField) {
+        setAmountFieldName(foundField.name);
+        setAmountField(foundField);
+        console.log("Amount field found:", foundField.name);
+      } else {
+        console.log("No amount field found in form fields");
+        // If no amount field found, use the first number field or first field
+        const firstNumberField = formFields.find(f => f.type === 'number');
+        if (firstNumberField) {
+          setAmountFieldName(firstNumberField.name);
+          setAmountField(firstNumberField);
+          console.log("Using first number field as amount:", firstNumberField.name);
+        }
+      }
+    }
+  }, [formFields]);
+
   // Calculate bonus when amount changes
   useEffect(() => {
-    // Find the amount field - it could be named 'amount' or have 'amount' in the label
-    const amountField = formFields.find(f => 
-      f.name === 'number' || 
-      f.name === 'Amount' || 
-      f.label.toLowerCase().includes('amount')
-    );
-    
-    if (amountField && formData[amountField.name] && promotions.length > 0) {
-      const amount = parseFloat(formData[amountField.name]);
+    if (amountFieldName && formData[amountFieldName] && promotions.length > 0 && selectedPromotion) {
+      const amount = parseFloat(formData[amountFieldName]);
       if (!isNaN(amount) && amount > 0) {
         calculateBonus(amount);
+        
+        // Check minimum deposit for selected promotion
+        if (selectedPromotion.minDeposit) {
+          if (amount < selectedPromotion.minDeposit) {
+            setAmountError(`Minimum deposit for ${selectedPromotion.bonusName} is ৳${selectedPromotion.minDeposit}`);
+          } else {
+            setAmountError(null);
+          }
+        } else {
+          setAmountError(null);
+        }
       } else {
         setCalculatedBonus(null);
+        setAmountError(null);
       }
     } else {
       setCalculatedBonus(null);
+      setAmountError(null);
     }
-  }, [formData, formFields, promotions]);
+  }, [formData, amountFieldName, promotions, selectedPromotion]);
+
+  // Update minDeposit when promotion changes
+  useEffect(() => {
+    if (selectedPromotion) {
+      setMinDepositAmount(selectedPromotion.minDeposit || null);
+    } else {
+      setMinDepositAmount(null);
+    }
+  }, [selectedPromotion]);
 
   const fetchTabData = async () => {
     try {
@@ -110,6 +187,7 @@ export default function DepositPage() {
 
       // Fetch payment methods for this tab
       const methodsRes = await depositService.getPaymentMethodByTab(activeTab);
+      console.log("payment method", methodsRes);
       if (methodsRes?.success) {
         setPaymentMethods(methodsRes.data || []);
         // Auto-select first method if available
@@ -126,6 +204,8 @@ export default function DepositPage() {
 
       // Fetch form fields for this tab
       const fieldsRes = await depositService.getFormFieldsByTab(activeTab);
+      console.log("fieldsRes", fieldsRes);
+      
       if (fieldsRes?.success) {
         setFormFields(fieldsRes.data || []);
         // Initialize form data with empty strings
@@ -138,6 +218,8 @@ export default function DepositPage() {
 
       // Fetch promotions for this tab
       const promotionsRes = await promotionService.getPromotionsByTab(activeTab);
+      console.log("promotions", promotionsRes);
+      
       if (promotionsRes?.success) {
         setPromotions(promotionsRes.data || []);
       }
@@ -150,39 +232,50 @@ export default function DepositPage() {
   };
 
   const calculateBonus = (amount: number) => {
-    let maxBonus = 0;
-    let bestPromotion: Promotion | null = null;
+    if (!selectedPromotion) return;
     
-    promotions.forEach(promo => {
-      if (!promo.isActive) return;
-      
-      // Check if amount meets minimum deposit
-      if (promo.minDeposit && amount < promo.minDeposit) return;
-      
-      // Check date range
-      const now = new Date();
-      if (promo.startDate && new Date(promo.startDate) > now) return;
-      if (promo.endDate && new Date(promo.endDate) < now) return;
-      
-      // Calculate bonus
-      let bonus = 0;
-      if (promo.type === 'PERCENT') {
-        bonus = (amount * promo.value) / 100;
-      } else {
-        bonus = promo.value;
-      }
-      
-      // No maxBonus field - just take the highest bonus
-      if (bonus > maxBonus) {
-        maxBonus = bonus;
-        bestPromotion = promo;
-      }
-    });
-    
-    setCalculatedBonus(maxBonus > 0 ? maxBonus : null);
-    if (bestPromotion) {
-      setSelectedPromotion(bestPromotion);
+    // Check if amount meets minimum deposit
+    if (selectedPromotion.minDeposit && amount < selectedPromotion.minDeposit) {
+      setCalculatedBonus(null);
+      return;
     }
+    
+    // Calculate bonus for selected promotion only
+    let bonus = 0;
+    if (selectedPromotion.type === 'PERCENT') {
+      bonus = (amount * selectedPromotion.value) / 100;
+    } else {
+      bonus = selectedPromotion.value;
+    }
+    
+    setCalculatedBonus(bonus);
+  };
+
+  const handleSelectPromotion = (promo: Promotion) => {
+    // Check if promotion belongs to current tab
+    if (promo.tab !== activeTab) {
+      alert("This promotion is not available for the selected payment method");
+      return;
+    }
+    
+    setSelectedPromotion(promo);
+    setShowPromoDetails(false);
+    
+    // Show a message about minimum deposit
+    if (promo.minDeposit) {
+      alert(`Minimum deposit for ${promo.bonusName} is ৳${promo.minDeposit}`);
+    }
+  };
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    // Reset all promotion-related states
+    setSelectedPromotion(null);
+    setCalculatedBonus(null);
+    setMinDepositAmount(null);
+    setAmountError(null);
+    setAmountFieldName("");
+    setAmountField(null);
   };
 
   const copyAddress = () => {
@@ -214,23 +307,28 @@ export default function DepositPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Find the amount field
-    const amountField = formFields.find(f => 
-      f.name === 'amount' || 
-      f.name === 'Amount' || 
-      f.label.toLowerCase().includes('amount')
-    );
+    // Check if amount field exists
+    if (!amountFieldName) {
+      alert("No amount field found. Please configure your form fields correctly.");
+      return;
+    }
     
     // Check if amount is valid
     let amount = 0;
-    if (amountField && formData[amountField.name]) {
-      amount = parseFloat(formData[amountField.name]);
+    if (formData[amountFieldName]) {
+      amount = parseFloat(formData[amountFieldName]);
       if (isNaN(amount) || amount <= 0) {
         alert("Please enter a valid amount");
         return;
       }
     } else {
       alert("Please enter an amount");
+      return;
+    }
+
+    // Check minimum deposit for selected promotion
+    if (selectedPromotion && selectedPromotion.minDeposit && amount < selectedPromotion.minDeposit) {
+      alert(`Minimum deposit for ${selectedPromotion.bonusName} is ৳${selectedPromotion.minDeposit}`);
       return;
     }
 
@@ -299,6 +397,8 @@ export default function DepositPage() {
         setFormData(initialData);
         setSelectedPromotion(null);
         setCalculatedBonus(null);
+        setMinDepositAmount(null);
+        setAmountError(null);
         setUploadStatus('idle');
         setUploadedFileUrl("");
       }
@@ -362,16 +462,19 @@ export default function DepositPage() {
       <div className="relative h-16 flex items-center justify-between px-4 border-b border-gray-800">
         <BackButton />
         <h1 className="text-xl font-bold flex-1 text-center">Deposit</h1>
-        <button className="w-10 h-10 rounded-full bg-black/30 flex items-center justify-center hover:bg-black/50">
-          <AlertCircle className="w-5 h-5" />
-        </button>
+      <button
+  onClick={() => router.push("/history")}
+  className="w-10 h-10 rounded-full bg-black/30 flex items-center justify-center hover:bg-black/50"
+>
+  <ClipboardClock className="w-5 h-5" />
+</button>
       </div>
 
       {/* Tabs */}
       <div className="px-4 pt-5 pb-3">
         <div className="grid grid-cols-3 gap-2">
           <button
-            onClick={() => setActiveTab("manual")}
+            onClick={() => handleTabChange("manual")}
             className={`py-2 text-sm font-semibold rounded-lg transition-all ${
               activeTab === "manual"
                 ? "bg-gradient-to-r from-red-600 to-red-500 text-white shadow-md"
@@ -381,7 +484,7 @@ export default function DepositPage() {
             BDT - Manual
           </button>
           <button
-            onClick={() => setActiveTab("auto")}
+            onClick={() => handleTabChange("auto")}
             className={`py-2 text-sm font-semibold rounded-lg transition-all ${
               activeTab === "auto"
                 ? "bg-gradient-to-r from-red-600 to-red-500 text-white shadow-md"
@@ -391,7 +494,7 @@ export default function DepositPage() {
             Auto Deposit
           </button>
           <button
-            onClick={() => setActiveTab("crypto")}
+            onClick={() => handleTabChange("crypto")}
             className={`py-2 text-sm font-semibold rounded-lg transition-all ${
               activeTab === "crypto"
                 ? "bg-gradient-to-r from-red-600 to-red-500 text-white shadow-md"
@@ -403,14 +506,44 @@ export default function DepositPage() {
         </div>
       </div>
 
-      {/* Promotions Banner - Only show if there are active promotions */}
-      {promotions.filter(p => p.isActive).length > 0 && (
+      {/* Selected Promotion Banner */}
+      {selectedPromotion && (
+        <div className="px-4 mt-2 mb-4">
+          <div className="bg-gradient-to-r from-pink-600/20 to-purple-600/20 rounded-xl p-3 border border-pink-500/30 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Gift className="w-4 h-4 text-pink-400" />
+              <span className="text-sm text-white">
+                <span className="font-bold">{selectedPromotion.bonusName}</span> selected
+                {selectedPromotion.minDeposit && (
+                  <span className="text-gray-300 ml-1">
+                    (Min: ৳{selectedPromotion.minDeposit})
+                  </span>
+                )}
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                setSelectedPromotion(null);
+                setCalculatedBonus(null);
+                setMinDepositAmount(null);
+                setAmountError(null);
+              }}
+              className="text-gray-400 hover:text-white"
+            >
+              <XCircle className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Promotions Banner - Only show if there are active promotions for current tab and no promotion selected */}
+      {promotions.filter(p => p.isActive).length > 0 && !selectedPromotion && (
         <div className="px-4 mt-2 mb-4">
           <div className="bg-gradient-to-r from-purple-900/50 to-pink-900/50 rounded-2xl p-4 border border-purple-500/30">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Gift className="w-5 h-5 text-pink-400" />
-                <h2 className="text-lg font-bold text-white">Active Bonuses</h2>
+                <h2 className="text-lg font-bold text-white">Available Bonuses</h2>
               </div>
               <Sparkles className="w-4 h-4 text-yellow-400" />
             </div>
@@ -419,10 +552,7 @@ export default function DepositPage() {
               {promotions.filter(p => p.isActive).map((promo, index) => (
                 <div
                   key={promo._id}
-                  onClick={() => {
-                    setSelectedPromotion(promo);
-                    setShowPromoDetails(true);
-                  }}
+                  onClick={() => handleSelectPromotion(promo)}
                   className={`bg-gradient-to-r ${getPromoGradient(index)} p-[1px] rounded-xl cursor-pointer transform hover:scale-[1.02] transition-all duration-200`}
                 >
                   <div className="bg-[#252334] rounded-xl p-3">
@@ -448,21 +578,21 @@ export default function DepositPage() {
                           </div>
                         </div>
                       </div>
+                      <ChevronRight className="w-5 h-5 text-gray-400" />
                     </div>
-                    
-                    {/* Bonus Preview - Only show if this promotion is selected */}
-                    {calculatedBonus && selectedPromotion?._id === promo._id && (
-                      <div className="mt-2 pt-2 border-t border-gray-700">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-400">You'll get:</span>
-                          <span className="text-green-400 font-bold">+ ৳{calculatedBonus.toFixed(2)}</span>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* No Promotions Message */}
+      {promotions.filter(p => p.isActive).length === 0 && !selectedPromotion && (
+        <div className="px-4 mt-2 mb-4">
+          <div className="bg-gray-800/50 rounded-xl p-4 text-center">
+            <p className="text-gray-400">No active bonuses available for this payment method</p>
           </div>
         </div>
       )}
@@ -550,15 +680,30 @@ export default function DepositPage() {
                           type={field.type}
                           value={formData[field.name] || ''}
                           onChange={(e) => handleInputChange(field.name, e.target.value)}
-                          placeholder={field.placeholder || `Enter ${field.label}`}
+                          placeholder={
+                            field.name === amountFieldName && minDepositAmount
+                              ? `Min: ৳${minDepositAmount} (Enter amount)`
+                              : field.placeholder || `Enter ${field.label}`
+                          }
                           required={field.required}
-                          className="w-full bg-white border-0 rounded-xl px-4 py-3 text-black text-center text-lg placeholder-black focus:outline-none focus:ring-2 focus:ring-green-400"
+                          min={field.name === amountFieldName && minDepositAmount ? minDepositAmount : undefined}
+                          className={`w-full bg-white border-0 rounded-xl px-4 py-3 text-black text-center text-lg placeholder-black focus:outline-none focus:ring-2 ${
+                            amountError && field.name === amountFieldName ? 'focus:ring-red-400 border-2 border-red-400' : 'focus:ring-green-400'
+                          }`}
                         />
                         {/* Bonus indicator for amount field */}
-                        {(field.name === 'amount' || field.name === 'Amount' || field.label.toLowerCase().includes('amount')) && calculatedBonus && (
+                        {field.name === amountFieldName && calculatedBonus && (
                           <div className="absolute -bottom-6 left-0 right-0 text-center">
                             <span className="text-xs text-green-400 bg-green-900/30 px-2 py-1 rounded-full">
                               + ৳{calculatedBonus.toFixed(2)} bonus will be added
+                            </span>
+                          </div>
+                        )}
+                        {/* Error message for amount field */}
+                        {field.name === amountFieldName && amountError && (
+                          <div className="absolute -bottom-6 left-0 right-0 text-center">
+                            <span className="text-xs text-red-400 bg-red-900/30 px-2 py-1 rounded-full">
+                              {amountError}
                             </span>
                           </div>
                         )}
@@ -571,7 +716,7 @@ export default function DepositPage() {
               <div className="pt-4">
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || (selectedPromotion && !!amountError)}
                   className="block mx-auto py-3 px-8 bg-gradient-to-r from-red-600 to-pink-600 text-white font-bold text-base rounded-xl hover:brightness-110 transition shadow-lg disabled:opacity-50"
                 >
                   {submitting ? 'Processing...' : 'Deposit Now'}
@@ -652,13 +797,25 @@ export default function DepositPage() {
                       type={field.type}
                       value={formData[field.name] || ''}
                       onChange={(e) => handleInputChange(field.name, e.target.value)}
-                      placeholder={field.placeholder || `Enter ${field.label}`}
+                      placeholder={
+                        field.name === amountFieldName && minDepositAmount
+                          ? `Min: ৳${minDepositAmount} (Enter amount)`
+                          : field.placeholder || `Enter ${field.label}`
+                      }
                       required={field.required}
-                      className="w-full bg-[#fdfde8] border-0 rounded-xl px-4 py-4 text-black text-center text-xl placeholder-black border-2 border-[#d12d4d] focus:outline-none focus:ring-2 focus:ring-red-400"
+                      min={field.name === amountFieldName && minDepositAmount ? minDepositAmount : undefined}
+                      className={`w-full bg-[#fdfde8] border-0 rounded-xl px-4 py-4 text-black text-center text-xl placeholder-black border-2 ${
+                        amountError && field.name === amountFieldName ? 'border-red-400' : 'border-[#d12d4d]'
+                      } focus:outline-none focus:ring-2 focus:ring-red-400`}
                     />
-                    {(field.name === 'amount' || field.name === 'Amount' || field.label.toLowerCase().includes('amount')) && calculatedBonus && (
+                    {field.name === amountFieldName && calculatedBonus && (
                       <div className="absolute -bottom-5 left-0 right-0 text-center">
                         <span className="text-xs text-green-400">+ ৳{calculatedBonus.toFixed(2)} bonus</span>
+                      </div>
+                    )}
+                    {field.name === amountFieldName && amountError && (
+                      <div className="absolute -bottom-5 left-0 right-0 text-center">
+                        <span className="text-xs text-red-400">{amountError}</span>
                       </div>
                     )}
                   </div>
@@ -667,7 +824,7 @@ export default function DepositPage() {
               <div className="pt-4">
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || (selectedPromotion && !!amountError)}
                   className="block mx-auto py-3 px-8 bg-gradient-to-r from-red-600 to-pink-600 text-white font-bold text-base rounded-xl hover:brightness-110 transition shadow-lg disabled:opacity-50"
                 >
                   {submitting ? 'Processing...' : 'Deposit Now'}
@@ -819,13 +976,25 @@ export default function DepositPage() {
                         type={field.type}
                         value={formData[field.name] || ''}
                         onChange={(e) => handleInputChange(field.name, e.target.value)}
-                        placeholder={field.placeholder || `Enter ${field.label}`}
+                        placeholder={
+                          field.name === amountFieldName && minDepositAmount
+                            ? `Min: ৳${minDepositAmount} (Enter amount)`
+                            : field.placeholder || `Enter ${field.label}`
+                        }
                         required={field.required}
-                        className="w-full bg-[#fdfde8] border-0 rounded-xl px-4 py-3 text-black border-2 border-[#fc0613] text-center placeholder-black focus:outline-none focus:ring-2 focus:ring-red-400"
+                        min={field.name === amountFieldName && minDepositAmount ? minDepositAmount : undefined}
+                        className={`w-full bg-[#fdfde8] border-0 rounded-xl px-4 py-3 text-black border-2 ${
+                          amountError && field.name === amountFieldName ? 'border-red-400' : 'border-[#fc0613]'
+                        } text-center placeholder-black focus:outline-none focus:ring-2 focus:ring-red-400`}
                       />
-                      {(field.name === 'amount' || field.name === 'Amount' || field.label.toLowerCase().includes('amount')) && calculatedBonus && (
+                      {field.name === amountFieldName && calculatedBonus && (
                         <div className="absolute -bottom-5 left-0 right-0 text-center">
                           <span className="text-xs text-green-400">+ ৳{calculatedBonus.toFixed(2)} bonus</span>
+                        </div>
+                      )}
+                      {field.name === amountFieldName && amountError && (
+                        <div className="absolute -bottom-5 left-0 right-0 text-center">
+                          <span className="text-xs text-red-400">{amountError}</span>
                         </div>
                       )}
                     </div>
@@ -835,7 +1004,7 @@ export default function DepositPage() {
               <div className="pt-4">
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || (selectedPromotion && !!amountError)}
                   className="block mx-auto py-3 px-8 bg-gradient-to-r from-red-600 to-pink-600 text-white font-bold text-base rounded-xl hover:brightness-110 transition shadow-lg disabled:opacity-50"
                 >
                   {submitting ? 'Processing...' : 'Deposit Now'}
@@ -854,8 +1023,6 @@ export default function DepositPage() {
           </form>
         )}
       </div>
-
-    
 
       {/* Success Modal */}
       {showSuccessModal && submittedRequest && (

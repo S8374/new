@@ -12,11 +12,13 @@ import {
   FileText,
   Gift,
   Percent,
-  Coins,
   Calendar,
   X,
   DollarSign,
-  TrendingUp
+  Upload,
+  Link2,
+  CheckCircle,
+  Loader2
 } from "lucide-react";
 import { depositService } from "@/services/api/deposit.service";
 import { promotionService, Promotion } from "@/services/api/promotion.service";
@@ -55,6 +57,18 @@ interface FormField {
   isActive: boolean;
 }
 
+// Helper function to generate slug from name
+const generateSlug = (text: string) => {
+  if (!text) return '';
+  return text
+    .toLowerCase()
+    .replace(/\s+/g, '-')           // Replace spaces with -
+    .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
+    .replace(/\-\-+/g, '-')         // Replace multiple - with single -
+    .replace(/^-+/, '')              // Trim - from start of text
+    .replace(/-+$/, '');             // Trim - from end of text
+};
+
 export default function DepositManagement() {
   const [activeTab, setActiveTab] = useState<TabType>('manual');
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
@@ -69,6 +83,14 @@ export default function DepositManagement() {
   const [showFieldModal, setShowFieldModal] = useState(false);
   const [showPromotionModal, setShowPromotionModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
+  
+  // Upload states for payment method icon
+  const [uploadingMethodIcon, setUploadingMethodIcon] = useState(false);
+  const [methodIconUploadStatus, setMethodIconUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
+  
+  // Upload states for promotion icon
+  const [uploadingPromoIcon, setUploadingPromoIcon] = useState(false);
+  const [promoIconUploadStatus, setPromoIconUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   
   // Form states
   const [methodForm, setMethodForm] = useState({
@@ -102,11 +124,22 @@ export default function DepositManagement() {
     type: 'PERCENT' as 'PERCENT' | 'FIXED',
     value: 0,
     minDeposit: undefined as number | undefined,
-    // maxBonus: undefined as number | undefined,
+    iconUrl: '',
     isActive: true,
     startDate: '',
     endDate: ''
   });
+
+  // Auto-generate slug preview when name changes
+  useEffect(() => {
+    if (!editingItem && methodForm.name && !methodForm.slug) {
+      // Only auto-generate if we're creating new and slug is empty
+      setMethodForm(prev => ({
+        ...prev,
+        slug: generateSlug(prev.name)
+      }));
+    }
+  }, [methodForm.name, editingItem]);
 
   // Fetch data based on active tab
   useEffect(() => {
@@ -148,34 +181,150 @@ export default function DepositManagement() {
     }
   };
 
+  // ========== IMAGE UPLOAD FUNCTION ==========
+  const uploadImageToImageBB = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const response = await fetch(`https://api.imgbb.com/1/upload?key=${process.env.NEXT_PUBLIC_IMAGEBB_API_KEY}`, {
+      method: 'POST',
+      body: formData
+    });
+
+    const data = await response.json();
+    
+    if (data.success) {
+      return data.data.url;
+    } else {
+      throw new Error('Image upload failed');
+    }
+  };
+
+  // ========== PAYMENT METHOD ICON UPLOAD ==========
+  const handleMethodIconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploadingMethodIcon(true);
+      setMethodIconUploadStatus('uploading');
+      
+      const imageUrl = await uploadImageToImageBB(file);
+      
+      setMethodForm(prev => ({ ...prev, icon: imageUrl }));
+      setMethodIconUploadStatus('success');
+      
+      // Reset status after 3 seconds
+      setTimeout(() => setMethodIconUploadStatus('idle'), 3000);
+    } catch (error) {
+      console.error("Error uploading icon:", error);
+      setMethodIconUploadStatus('error');
+      alert("Failed to upload icon");
+    } finally {
+      setUploadingMethodIcon(false);
+    }
+  };
+
+  // ========== PROMOTION ICON UPLOAD ==========
+  const handlePromoIconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploadingPromoIcon(true);
+      setPromoIconUploadStatus('uploading');
+      
+      const imageUrl = await uploadImageToImageBB(file);
+      
+      setPromotionForm(prev => ({ ...prev, iconUrl: imageUrl }));
+      setPromoIconUploadStatus('success');
+      
+      // Reset status after 3 seconds
+      setTimeout(() => setPromoIconUploadStatus('idle'), 3000);
+    } catch (error) {
+      console.error("Error uploading icon:", error);
+      setPromoIconUploadStatus('error');
+      alert("Failed to upload icon");
+    } finally {
+      setUploadingPromoIcon(false);
+    }
+  };
+
   // ========== PAYMENT METHOD HANDLERS ==========
   const handleCreateMethod = async () => {
     try {
+      // Validate slug - ensure it's not empty
+      if (!methodForm.slug && !methodForm.name) {
+        alert("Please enter a name or slug");
+        return;
+      }
+
+      // Generate slug from name if not provided
+      const slug = methodForm.slug 
+        ? generateSlug(methodForm.slug)
+        : generateSlug(methodForm.name);
+      
+      // Check if slug is valid
+      if (!slug) {
+        alert("Invalid slug generated. Please check the name.");
+        return;
+      }
+
       await depositService.createPaymentMethod({
-        ...methodForm,
-        tab: activeTab,
-        slug: methodForm.slug || methodForm.name.toLowerCase().replace(/\s+/g, '-')
+        name: methodForm.name,
+        slug: slug,
+        icon: methodForm.icon,
+        description: methodForm.description,
+        order: methodForm.order,
+        isActive: methodForm.isActive,
+        tab: activeTab
       });
       setShowMethodModal(false);
       resetMethodForm();
       fetchData();
-    } catch (error) {
+      alert("Payment method created successfully!");
+    } catch (error: any) {
       console.error("Error creating payment method:", error);
-      alert("Failed to create payment method");
+      
+      // Check for duplicate key error
+      if (error.response?.data?.message?.includes("duplicate key") || 
+          error.message?.includes("duplicate key")) {
+        alert(`A payment method with slug "${generateSlug(methodForm.slug || methodForm.name)}" already exists. Please use a different name.`);
+      } else {
+        alert("Failed to create payment method. Please try again.");
+      }
     }
   };
 
   const handleUpdateMethod = async () => {
     if (!editingItem) return;
     try {
-      await depositService.updatePaymentMethod(editingItem._id, methodForm);
+      // Generate slug from name if not provided
+      const slug = methodForm.slug 
+        ? generateSlug(methodForm.slug)
+        : generateSlug(methodForm.name);
+      
+      await depositService.updatePaymentMethod(editingItem._id, {
+        name: methodForm.name,
+        slug: slug,
+        icon: methodForm.icon,
+        description: methodForm.description,
+        order: methodForm.order,
+        isActive: methodForm.isActive
+      });
       setShowMethodModal(false);
       setEditingItem(null);
       resetMethodForm();
       fetchData();
-    } catch (error) {
+      alert("Payment method updated successfully!");
+    } catch (error: any) {
       console.error("Error updating payment method:", error);
-      alert("Failed to update payment method");
+      
+      if (error.response?.data?.message?.includes("duplicate key")) {
+        alert(`A payment method with slug "${generateSlug(methodForm.slug || methodForm.name)}" already exists. Please use a different name.`);
+      } else {
+        alert("Failed to update payment method. Please try again.");
+      }
     }
   };
 
@@ -184,6 +333,7 @@ export default function DepositManagement() {
     try {
       await depositService.deletePaymentMethod(id);
       fetchData();
+      alert("Payment method deleted successfully!");
     } catch (error) {
       console.error("Error deleting payment method:", error);
       alert("Failed to delete payment method");
@@ -342,7 +492,7 @@ export default function DepositManagement() {
         tab: activeTab,
         value: Number(promotionForm.value),
         minDeposit: promotionForm.minDeposit ? Number(promotionForm.minDeposit) : undefined,
-        maxBonus: promotionForm.maxBonus ? Number(promotionForm.maxBonus) : undefined
+        iconUrl: promotionForm.iconUrl || undefined
       });
       setShowPromotionModal(false);
       resetPromotionForm();
@@ -360,7 +510,7 @@ export default function DepositManagement() {
         ...promotionForm,
         value: Number(promotionForm.value),
         minDeposit: promotionForm.minDeposit ? Number(promotionForm.minDeposit) : undefined,
-        maxBonus: promotionForm.maxBonus ? Number(promotionForm.maxBonus) : undefined
+        iconUrl: promotionForm.iconUrl || undefined
       });
       setShowPromotionModal(false);
       setEditingItem(null);
@@ -405,6 +555,7 @@ export default function DepositManagement() {
       order: 0,
       isActive: true
     });
+    setMethodIconUploadStatus('idle');
   };
 
   const resetInstructionForm = () => {
@@ -434,11 +585,12 @@ export default function DepositManagement() {
       type: 'PERCENT',
       value: 0,
       minDeposit: undefined,
-      maxBonus: undefined,
+      iconUrl: '',
       isActive: true,
       startDate: '',
       endDate: ''
     });
+    setPromoIconUploadStatus('idle');
   };
 
   const openEditMethod = (method: PaymentMethod) => {
@@ -486,7 +638,7 @@ export default function DepositManagement() {
       type: promotion.type,
       value: promotion.value,
       minDeposit: promotion.minDeposit,
-      maxBonus: promotion.maxBonus,
+      iconUrl: promotion.iconUrl || '',
       isActive: promotion.isActive,
       startDate: promotion.startDate ? new Date(promotion.startDate).toISOString().split('T')[0] : '',
       endDate: promotion.endDate ? new Date(promotion.endDate).toISOString().split('T')[0] : ''
@@ -573,31 +725,37 @@ export default function DepositManagement() {
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Gift className="w-5 h-5 text-pink-400" />
-                        <h3 className="text-white font-semibold">{promotion.bonusName}</h3>
-                      </div>
-                      
-                      <div className="flex items-center gap-2 mb-2">
-                        {promotion.type === 'PERCENT' ? (
-                          <Percent className="w-4 h-4 text-blue-400" />
+                      <div className="flex items-center gap-3 mb-2">
+                        {promotion.iconUrl ? (
+                          <img 
+                            src={promotion.iconUrl} 
+                            alt={promotion.bonusName} 
+                            className="w-10 h-10 rounded-lg object-cover"
+                          />
                         ) : (
-                          <DollarSign className="w-4 h-4 text-green-400" />
+                          <div className="w-10 h-10 rounded-lg bg-pink-600/20 flex items-center justify-center">
+                            <Gift className="w-5 h-5 text-pink-400" />
+                          </div>
                         )}
-                        <span className="text-2xl font-bold text-white">
-                          {formatBonus(promotion)}
-                        </span>
+                        <div>
+                          <h3 className="text-white font-semibold">{promotion.bonusName}</h3>
+                          <div className="flex items-center gap-2">
+                            {promotion.type === 'PERCENT' ? (
+                              <Percent className="w-3 h-3 text-blue-400" />
+                            ) : (
+                              <DollarSign className="w-3 h-3 text-green-400" />
+                            )}
+                            <span className="text-sm font-bold text-white">
+                              {formatBonus(promotion)}
+                            </span>
+                          </div>
+                        </div>
                       </div>
 
                       <div className="space-y-1 text-sm">
                         {promotion.minDeposit && (
                           <p className="text-gray-300">
                             Min Deposit: <span className="text-yellow-400">৳{promotion.minDeposit}</span>
-                          </p>
-                        )}
-                        {promotion.maxBonus && (
-                          <p className="text-gray-300">
-                            Max Bonus: <span className="text-green-400">৳{promotion.maxBonus}</span>
                           </p>
                         )}
                       </div>
@@ -684,8 +842,12 @@ export default function DepositManagement() {
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      {method.icon && (
-                        <img src={method.icon} alt={method.name} className="w-10 h-10 rounded" />
+                      {method.icon ? (
+                        <img src={method.icon} alt={method.name} className="w-10 h-10 rounded-lg object-cover" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-blue-600/20 flex items-center justify-center">
+                          <CreditCard className="w-5 h-5 text-blue-400" />
+                        </div>
                       )}
                       <div>
                         <h3 className="text-white font-semibold">{method.name}</h3>
@@ -878,10 +1040,10 @@ export default function DepositManagement() {
         </div>
       </div>
 
-      {/* Payment Method Modal */}
+      {/* Payment Method Modal with Slug Handling */}
       {showMethodModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6">
+          <div className="bg-gray-800 rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold text-white">
                 {editingItem ? 'Edit Payment Method' : 'Add Payment Method'}
@@ -895,38 +1057,145 @@ export default function DepositManagement() {
               e.preventDefault();
               editingItem ? handleUpdateMethod() : handleCreateMethod();
             }} className="space-y-4">
+              {/* Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">Name *</label>
                 <input
                   type="text"
                   value={methodForm.name}
-                  onChange={(e) => setMethodForm({...methodForm, name: e.target.value})}
+                  onChange={(e) => {
+                    const newName = e.target.value;
+                    setMethodForm({
+                      ...methodForm,
+                      name: newName,
+                      // Auto-generate slug only if we're creating new and slug is empty or matches the generated from previous name
+                      slug: !editingItem && (!methodForm.slug || methodForm.slug === generateSlug(methodForm.name))
+                        ? generateSlug(newName)
+                        : methodForm.slug
+                    });
+                  }}
                   className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                  placeholder="e.g., bKash, Nagad, Rocket"
                   required
                 />
               </div>
 
+              {/* Slug */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Slug</label>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Slug (unique identifier) *
+                </label>
                 <input
                   type="text"
                   value={methodForm.slug}
-                  onChange={(e) => setMethodForm({...methodForm, slug: e.target.value})}
+                  onChange={(e) => setMethodForm({
+                    ...methodForm, 
+                    slug: generateSlug(e.target.value)
+                  })}
                   className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-                  placeholder="Auto-generated from name if empty"
+                  placeholder="e.g., bkash, nagad, rocket"
+                  required
                 />
+                <p className="text-xs text-gray-400 mt-1">
+                  Slug preview: {methodForm.slug || generateSlug(methodForm.name) || 'not-set'}
+                </p>
+                <p className="text-xs text-yellow-400 mt-1">
+                  Slug must be unique and contain only letters, numbers, and hyphens
+                </p>
               </div>
 
+              {/* Icon Upload Section */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Icon URL</label>
-                <input
-                  type="url"
-                  value={methodForm.icon}
-                  onChange={(e) => setMethodForm({...methodForm, icon: e.target.value})}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-                />
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Payment Method Icon
+                </label>
+                <div className="space-y-3">
+                  {/* Upload Area */}
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleMethodIconUpload}
+                      className="hidden"
+                      id="method-icon-upload"
+                      disabled={uploadingMethodIcon}
+                    />
+                    <label
+                      htmlFor="method-icon-upload"
+                      className={`flex items-center justify-center w-full rounded-lg border-2 border-dashed p-4 cursor-pointer transition-colors ${
+                        methodIconUploadStatus === 'success' 
+                          ? 'border-green-500 bg-green-500/10' 
+                          : methodIconUploadStatus === 'error'
+                          ? 'border-red-500 bg-red-500/10'
+                          : 'border-gray-600 hover:border-blue-500 bg-gray-700/50'
+                      }`}
+                    >
+                      <div className="text-center">
+                        {uploadingMethodIcon ? (
+                          <>
+                            <Loader2 className="w-8 h-8 mx-auto mb-2 text-blue-400 animate-spin" />
+                            <p className="text-sm text-gray-300">Uploading...</p>
+                          </>
+                        ) : methodIconUploadStatus === 'success' ? (
+                          <>
+                            <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500" />
+                            <p className="text-sm text-green-400">Upload Successful!</p>
+                          </>
+                        ) : methodIconUploadStatus === 'error' ? (
+                          <>
+                            <X className="w-8 h-8 mx-auto mb-2 text-red-500" />
+                            <p className="text-sm text-red-400">Upload Failed. Try again.</p>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                            <p className="text-sm text-gray-300">Click to upload icon</p>
+                            <p className="text-xs text-gray-500 mt-1">PNG, JPG, GIF up to 5MB</p>
+                          </>
+                        )}
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* Preview or URL Input */}
+                  {methodForm.icon && (
+                    <div className="flex items-center gap-3 p-3 bg-gray-700 rounded-lg">
+                      <img 
+                        src={methodForm.icon} 
+                        alt="Icon preview" 
+                        className="w-12 h-12 rounded-lg object-cover"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-gray-400 truncate">{methodForm.icon}</p>
+                        <button
+                          type="button"
+                          onClick={() => setMethodForm({...methodForm, icon: ''})}
+                          className="text-xs text-red-400 hover:text-red-300 mt-1"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Manual URL Input */}
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1 flex items-center gap-1">
+                      <Link2 className="w-3 h-3" />
+                      Or enter icon URL manually
+                    </label>
+                    <input
+                      type="url"
+                      value={methodForm.icon}
+                      onChange={(e) => setMethodForm({...methodForm, icon: e.target.value})}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
+                      placeholder="https://example.com/icon.png"
+                    />
+                  </div>
+                </div>
               </div>
 
+              {/* Description */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">Description</label>
                 <textarea
@@ -934,9 +1203,11 @@ export default function DepositManagement() {
                   onChange={(e) => setMethodForm({...methodForm, description: e.target.value})}
                   rows={3}
                   className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                  placeholder="Optional description"
                 />
               </div>
 
+              {/* Order */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">Order</label>
                 <input
@@ -944,9 +1215,11 @@ export default function DepositManagement() {
                   value={methodForm.order}
                   onChange={(e) => setMethodForm({...methodForm, order: parseInt(e.target.value) || 0})}
                   className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                  min="0"
                 />
               </div>
 
+              {/* Active Status */}
               <div className="flex items-center">
                 <input
                   type="checkbox"
@@ -960,6 +1233,7 @@ export default function DepositManagement() {
                 </label>
               </div>
 
+              {/* Form Buttons */}
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
@@ -970,9 +1244,20 @@ export default function DepositManagement() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                  disabled={uploadingMethodIcon}
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  {editingItem ? 'Update' : 'Create'}
+                  {uploadingMethodIcon ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="w-4 h-4" />
+                      {editingItem ? 'Update' : 'Create'}
+                    </>
+                  )}
                 </button>
               </div>
             </form>
@@ -1199,7 +1484,7 @@ export default function DepositManagement() {
         </div>
       )}
 
-      {/* Promotion Modal */}
+      {/* Promotion Modal with Icon Upload */}
       {showPromotionModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-gray-800 rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
@@ -1318,26 +1603,96 @@ export default function DepositManagement() {
                 </div>
               </div>
 
-              {/* Max Bonus
+              {/* Icon Upload Section */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Maximum Bonus (Optional)
+                  Promotion Icon (Optional)
                 </label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="number"
-                    value={promotionForm.maxBonus || ''}
-                    onChange={(e) => setPromotionForm({
-                      ...promotionForm, 
-                      maxBonus: e.target.value ? parseFloat(e.target.value) : undefined
-                    })}
-                    className="w-full pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-                    placeholder="e.g., 200"
-                    min="0"
-                  />
+                <div className="space-y-3">
+                  {/* Upload Area */}
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePromoIconUpload}
+                      className="hidden"
+                      id="promotion-icon-upload"
+                      disabled={uploadingPromoIcon}
+                    />
+                    <label
+                      htmlFor="promotion-icon-upload"
+                      className={`flex items-center justify-center w-full rounded-lg border-2 border-dashed p-4 cursor-pointer transition-colors ${
+                        promoIconUploadStatus === 'success' 
+                          ? 'border-green-500 bg-green-500/10' 
+                          : promoIconUploadStatus === 'error'
+                          ? 'border-red-500 bg-red-500/10'
+                          : 'border-gray-600 hover:border-pink-500 bg-gray-700/50'
+                      }`}
+                    >
+                      <div className="text-center">
+                        {uploadingPromoIcon ? (
+                          <>
+                            <Loader2 className="w-8 h-8 mx-auto mb-2 text-pink-400 animate-spin" />
+                            <p className="text-sm text-gray-300">Uploading...</p>
+                          </>
+                        ) : promoIconUploadStatus === 'success' ? (
+                          <>
+                            <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500" />
+                            <p className="text-sm text-green-400">Upload Successful!</p>
+                          </>
+                        ) : promoIconUploadStatus === 'error' ? (
+                          <>
+                            <X className="w-8 h-8 mx-auto mb-2 text-red-500" />
+                            <p className="text-sm text-red-400">Upload Failed. Try again.</p>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                            <p className="text-sm text-gray-300">Click to upload icon</p>
+                            <p className="text-xs text-gray-500 mt-1">PNG, JPG, GIF up to 5MB</p>
+                          </>
+                        )}
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* Preview or URL Input */}
+                  {promotionForm.iconUrl && (
+                    <div className="flex items-center gap-3 p-3 bg-gray-700 rounded-lg">
+                      <img 
+                        src={promotionForm.iconUrl} 
+                        alt="Icon preview" 
+                        className="w-12 h-12 rounded-lg object-cover"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-gray-400 truncate">{promotionForm.iconUrl}</p>
+                        <button
+                          type="button"
+                          onClick={() => setPromotionForm({...promotionForm, iconUrl: ''})}
+                          className="text-xs text-red-400 hover:text-red-300 mt-1"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Manual URL Input */}
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1 flex items-center gap-1">
+                      <Link2 className="w-3 h-3" />
+                      Or enter icon URL manually
+                    </label>
+                    <input
+                      type="url"
+                      value={promotionForm.iconUrl}
+                      onChange={(e) => setPromotionForm({...promotionForm, iconUrl: e.target.value})}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm"
+                      placeholder="https://example.com/icon.png"
+                    />
+                  </div>
                 </div>
-              </div> */}
+              </div>
 
               {/* Date Range */}
               <div className="grid grid-cols-2 gap-3">
@@ -1389,10 +1744,20 @@ export default function DepositManagement() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-lg flex items-center justify-center gap-2"
+                  disabled={uploadingPromoIcon}
+                  className="flex-1 px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  <Gift className="w-4 h-4" />
-                  {editingItem ? 'Update' : 'Create'}
+                  {uploadingPromoIcon ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Gift className="w-4 h-4" />
+                      {editingItem ? 'Update' : 'Create'}
+                    </>
+                  )}
                 </button>
               </div>
             </form>

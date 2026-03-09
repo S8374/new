@@ -50,12 +50,26 @@ const Header = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const languages = [
-    { code: "en", name: "English",          flag: "🇬🇧" },
-    { code: "bn", name: "বাংলা",             flag: "🇧🇩" },
-    { code: "zh", name: "中文 (简体)",       flag: "🇨🇳" },
-    { code: "vi", name: "Tiếng Việt",       flag: "🇻🇳" },
-  ];
+const languages = [
+  { 
+    code: "zh", 
+    name: "中文[简体]", 
+    flag: "🇨🇳",
+    selected: false 
+  },
+  { 
+    code: "en", 
+    name: "English", 
+    flag: "🇬🇧",
+    selected: true   
+  },
+  { 
+    code: "vi", 
+    name: "Tiếng Việt", 
+    flag: "🇻🇳",
+    selected: false 
+  },
+];
 
   const wallet = user?.wallet || { balance: 0 };
   const [selectedLang, setSelectedLang] = useState(languages[0]);
