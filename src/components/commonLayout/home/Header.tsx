@@ -9,8 +9,10 @@ import SignInModal from "@/components/auth/SignInModal";
 import SignUpModal from "@/components/auth/SignUpModal";
 import BalanceHeader from "./BalanceHeader";
 import { authService } from "@/services/api/auth.services";
+import { useTranslation } from "@/hooks/useTranslation";
 
 const Header = () => {
+  const { t, changeLanguage, currentLanguage } = useTranslation();
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
   const [isSignUpOpen, setIsSignUpOpen] = useState(false);
@@ -50,31 +52,30 @@ const Header = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-const languages = [
-  { 
-    code: "zh", 
-    name: "中文[简体]", 
-    flag: "🇨🇳",
-    selected: false 
-  },
-  { 
-    code: "en", 
-    name: "English", 
-    flag: "🇬🇧",
-    selected: true   
-  },
-  { 
-    code: "vi", 
-    name: "Tiếng Việt", 
-    flag: "🇻🇳",
-    selected: false 
-  },
-];
+  const languages = [
+    { 
+      code: "zh", 
+      name: "中文[简体]", 
+      flag: "🇨🇳",
+    },
+    { 
+      code: "en", 
+      name: "English", 
+      flag: "🇬🇧",
+    },
+    { 
+      code: "vi", 
+      name: "Tiếng Việt", 
+      flag: "🇻🇳",
+    },
+  ];
 
   const wallet = user?.wallet || { balance: 0 };
-  const [selectedLang, setSelectedLang] = useState(languages[0]);
 
   const isLoggedIn = !!user;
+
+  // Get current language object
+  const currentLangObj = languages.find(lang => lang.code === currentLanguage) || languages[1];
 
   return (
     <>
@@ -88,15 +89,13 @@ const languages = [
           {/* Right Section */}
           <div className="flex items-center gap-2 sm:gap-3">
             {loading ? (
-              // Optional: show skeleton / spinner while checking auth
               <div className="h-9 w-24 animate-pulse rounded-full bg-muted" />
             ) : isLoggedIn ? (
               <>
                 <BalanceHeader 
                   wallet={wallet} 
-                  onRefresh={fetchUser} // Pass refresh function to update header when balance changes
+                  onRefresh={fetchUser}
                 />
-                {/* You can also show username, avatar, logout button, etc. here */}
               </>
             ) : (
               <div className="flex items-center gap-2">
@@ -106,7 +105,7 @@ const languages = [
                   className="rounded-full bg-chart-4/30 border-chart-4 hover:text-background text-background hover:bg-chart-4/20"
                   onClick={() => setIsSignInOpen(true)}
                 >
-                  SIGN IN
+                  {t('common.signIn')}
                 </Button>
 
                 <Button
@@ -114,12 +113,12 @@ const languages = [
                   className="rounded-full bg-chart-4 text-foreground hover:bg-bg-chart-4/90"
                   onClick={() => setIsSignUpOpen(true)}
                 >
-                  SIGN UP
+                  {t('common.signUp')}
                 </Button>
               </div>
             )}
 
-            {/* Language Selector – always visible */}
+            {/* Language Selector */}
             <div className="relative" ref={dropdownRef}>
               <Button
                 onClick={() => setIsLanguageOpen(!isLanguageOpen)}
@@ -131,22 +130,25 @@ const languages = [
               </Button>
 
               {isLanguageOpen && (
-                <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border bg-popover shadow-xl">
+                <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border bg-popover shadow-xl z-50">
                   {languages.map((lang) => (
                     <button
                       key={lang.code}
                       onClick={() => {
-                        setSelectedLang(lang);
+                        changeLanguage(lang.code);
                         setIsLanguageOpen(false);
                       }}
                       className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm transition ${
-                        selectedLang.code === lang.code
+                        currentLanguage === lang.code
                           ? "bg-accent font-medium"
                           : "hover:bg-accent/60"
                       }`}
                     >
                       <span className="text-xl">{lang.flag}</span>
                       <span>{lang.name}</span>
+                      {currentLanguage === lang.code && (
+                        <span className="ml-auto text-xs text-green-400">✓</span>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -156,7 +158,6 @@ const languages = [
         </div>
       </header>
 
-      {/* ✅ Pass fetchUser */}
       <SignInModal
         isOpen={isSignInOpen}
         onClose={() => setIsSignInOpen(false)}

@@ -4,6 +4,7 @@ import { Toaster } from "react-hot-toast";
 
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import LanguageProvider from "@/context/LanguageProvider";
 
 // Load Poppins font
 const poppins = Poppins({
@@ -27,10 +28,14 @@ export default function RootLayout({
       <body
         className={`${poppins.variable} font-sans antialiased bg-background text-foreground`}
       >
+        <LanguageProvider>
+
         <AuthProvider>
         {children}
         </AuthProvider>
         <Toaster position="top-right" reverseOrder={false} />
+        </LanguageProvider>
+
       </body>
     </html>
   );

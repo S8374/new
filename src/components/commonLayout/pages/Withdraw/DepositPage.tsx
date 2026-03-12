@@ -12,7 +12,12 @@ import {
   Percent,
   Sparkles,
   ChevronRight,
-  ClipboardClock 
+  ClipboardClock,
+  Phone,
+  Hash,
+  User as UserIcon,
+  Mail,
+  FileText
 } from "lucide-react";
 import BackButton from "@/components/ui/BackButton";
 import { depositService } from "@/services/api/deposit.service";
@@ -69,7 +74,7 @@ export default function DepositPage() {
   const [amountFieldName, setAmountFieldName] = useState<string>("");
   const [amountField, setAmountField] = useState<FormField | null>(null);
 
-  // Form state
+  // Form state - will store all form field values dynamically
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [calculatedBonus, setCalculatedBonus] = useState<number | null>(null);
   const [amountError, setAmountError] = useState<string | null>(null);
@@ -94,6 +99,7 @@ export default function DepositPage() {
     setUploadedFileUrl("");
     setAmountFieldName("");
     setAmountField(null);
+    setFormData({});
   }, [activeTab]);
 
   // Fetch data based on active tab
@@ -104,43 +110,37 @@ export default function DepositPage() {
   // Find the amount field whenever form fields change
   useEffect(() => {
     if (formFields.length > 0) {
-      console.log("Searching for amount field in:", formFields);
+      console.log("All form fields:", formFields);
       
       // Try to find the amount field by checking common patterns
       let foundField = null;
       
       // First try: look for field with type 'number' that might be for amount
       const numberFields = formFields.filter(f => f.type === 'number');
-      if (numberFields.length === 1) {
-        // If there's exactly one number field, use that as amount
+      
+      // Look for field with "amount" in name or label
+      foundField = formFields.find(f => 
+        f.name.toLowerCase().includes('amount') || 
+        f.label.toLowerCase().includes('amount') ||
+        f.name === 'Amount' ||
+        f.name === 'ammount' ||
+        f.name.toLowerCase() === 'amount' ||
+        f.label.toLowerCase().includes('enter amount') ||
+        f.label.toLowerCase().includes('your amount')
+      );
+      
+      // If not found by pattern, use the first number field
+      if (!foundField && numberFields.length > 0) {
         foundField = numberFields[0];
-        console.log("Found single number field, using as amount:", foundField);
-      } else {
-        // If multiple number fields, try to find by name/label patterns
-        foundField = formFields.find(f => 
-          f.name.toLowerCase().includes('amount') || 
-          f.label.toLowerCase().includes('amount') ||
-          f.name === 'Amount' ||
-          f.name === 'ammount' ||
-          f.name.toLowerCase() === 'amount' ||
-          f.label.toLowerCase().includes('enter amount') ||
-          f.label.toLowerCase().includes('your amount')
-        );
+        console.log("Using first number field as amount:", foundField.name);
       }
       
       if (foundField) {
         setAmountFieldName(foundField.name);
         setAmountField(foundField);
-        console.log("Amount field found:", foundField.name);
+        console.log("Amount field identified:", foundField.name);
       } else {
-        console.log("No amount field found in form fields");
-        // If no amount field found, use the first number field or first field
-        const firstNumberField = formFields.find(f => f.type === 'number');
-        if (firstNumberField) {
-          setAmountFieldName(firstNumberField.name);
-          setAmountField(firstNumberField);
-          console.log("Using first number field as amount:", firstNumberField.name);
-        }
+        console.log("No amount field identified in form fields");
       }
     }
   }, [formFields]);
@@ -187,7 +187,7 @@ export default function DepositPage() {
 
       // Fetch payment methods for this tab
       const methodsRes = await depositService.getPaymentMethodByTab(activeTab);
-      console.log("payment method", methodsRes);
+      console.log("Payment methods:", methodsRes);
       if (methodsRes?.success) {
         setPaymentMethods(methodsRes.data || []);
         // Auto-select first method if available
@@ -204,21 +204,22 @@ export default function DepositPage() {
 
       // Fetch form fields for this tab
       const fieldsRes = await depositService.getFormFieldsByTab(activeTab);
-      console.log("fieldsRes", fieldsRes);
+      console.log("Form fields received:", fieldsRes);
       
       if (fieldsRes?.success) {
         setFormFields(fieldsRes.data || []);
-        // Initialize form data with empty strings
+        // Initialize form data with empty strings for all fields
         const initialData: Record<string, string> = {};
         fieldsRes.data.forEach((field: FormField) => {
           initialData[field.name] = '';
         });
         setFormData(initialData);
+        console.log("Initialized form data with fields:", Object.keys(initialData));
       }
 
       // Fetch promotions for this tab
       const promotionsRes = await promotionService.getPromotionsByTab(activeTab);
-      console.log("promotions", promotionsRes);
+      console.log("Promotions:", promotionsRes);
       
       if (promotionsRes?.success) {
         setPromotions(promotionsRes.data || []);
@@ -285,21 +286,29 @@ export default function DepositPage() {
   };
 
   const handleInputChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => {
+      const newData = { ...prev, [name]: value };
+      console.log("Form data updated:", newData);
+      return newData;
+    });
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setUploadStatus('uploading');
     
-    // Simulate upload - replace with actual ImageBB or your upload logic
+    // Simulate upload - replace with actual ImageBB upload logic
     setTimeout(() => {
       // Mock successful upload
-      const mockUrl = "https://i.ibb.co/example/uploaded-image.jpg";
+      const mockUrl = `https://i.ibb.co/example/uploaded-${Date.now()}.jpg`;
       setUploadedFileUrl(mockUrl);
       setUploadStatus('success');
+      
+      // Store the uploaded file URL in form data with the field name
+      handleInputChange(fieldName, mockUrl);
+      
       setTimeout(() => setUploadStatus('idle'), 3000);
     }, 2000);
   };
@@ -307,18 +316,19 @@ export default function DepositPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check if amount field exists
-    if (!amountFieldName) {
-      alert("No amount field found. Please configure your form fields correctly.");
-      return;
-    }
+    // Log all form data before submission
+    console.log("Submitting form with data:", formData);
+    console.log("All form fields:", formFields);
+    
+    // Find the amount field
+    const amountFieldObj = amountField || formFields.find(f => f.name === amountFieldName);
     
     // Check if amount is valid
     let amount = 0;
-    if (formData[amountFieldName]) {
-      amount = parseFloat(formData[amountFieldName]);
+    if (amountFieldObj && formData[amountFieldObj.name]) {
+      amount = parseFloat(formData[amountFieldObj.name]);
       if (isNaN(amount) || amount <= 0) {
-        alert("Please enter a valid amount");
+        alert(`Please enter a valid amount in the "${amountFieldObj.label}" field`);
         return;
       }
     } else {
@@ -338,25 +348,25 @@ export default function DepositPage() {
       return;
     }
 
-    // Check required fields
+    // Check all required fields
     const missingFields = formFields
       .filter(f => f.required && !formData[f.name])
       .map(f => f.label);
     
     if (missingFields.length > 0) {
-      alert(`Please fill in: ${missingFields.join(', ')}`);
+      alert(`Please fill in all required fields: ${missingFields.join(', ')}`);
       return;
     }
 
     try {
       setSubmitting(true);
       
-      // Prepare request data
+      // Prepare request data - this will include ALL form fields dynamically
       const requestData: any = {
         depositType: activeTab,
         paymentMethod: selectedMethod.name,
         amount: amount,
-        formData: formData,
+        formData: formData, // This contains all form field values
       };
 
       // Add promotion if selected and bonus calculated
@@ -365,23 +375,64 @@ export default function DepositPage() {
         requestData.promotionName = selectedPromotion.bonusName;
         requestData.promotionType = selectedPromotion.type;
         requestData.promotionValue = selectedPromotion.value;
+        requestData.bonusAmount = calculatedBonus;
       }
 
-      // Add screenshot if uploaded
-      if (uploadStatus === 'success' && uploadedFileUrl) {
-        requestData.screenshot = uploadedFileUrl;
+      // Find screenshot field if any
+      const screenshotField = formFields.find(f => f.type === 'screenshot');
+      if (screenshotField && formData[screenshotField.name]) {
+        requestData.screenshot = formData[screenshotField.name];
       }
 
-      // Add transaction details for crypto/auto
+      // For crypto/auto, extract common fields
       if (activeTab === 'crypto') {
-        requestData.walletAddress = formData.walletAddress || walletAddress;
-        requestData.transactionId = formData.transactionId;
+        // Find transaction ID field (if exists)
+        const txField = formFields.find(f => 
+          f.name.toLowerCase().includes('transaction') || 
+          f.label.toLowerCase().includes('transaction') ||
+          f.name.toLowerCase().includes('tx')
+        );
+        if (txField && formData[txField.name]) {
+          requestData.transactionId = formData[txField.name];
+        }
+        
+        // Find wallet address field (if exists)
+        const walletField = formFields.find(f => 
+          f.name.toLowerCase().includes('wallet') || 
+          f.label.toLowerCase().includes('wallet') ||
+          f.name.toLowerCase().includes('address')
+        );
+        if (walletField && formData[walletField.name]) {
+          requestData.walletAddress = formData[walletField.name];
+        } else {
+          requestData.walletAddress = walletAddress;
+        }
       }
 
       if (activeTab === 'auto') {
-        requestData.senderNumber = formData.senderNumber;
-        requestData.transactionId = formData.transactionId;
+        // Find sender number field (if exists)
+        const senderField = formFields.find(f => 
+          f.name.toLowerCase().includes('sender') || 
+          f.label.toLowerCase().includes('sender') ||
+          f.name.toLowerCase().includes('phone') ||
+          f.name.toLowerCase().includes('number')
+        );
+        if (senderField && formData[senderField.name]) {
+          requestData.senderNumber = formData[senderField.name];
+        }
+        
+        // Find transaction ID field (if exists)
+        const txField = formFields.find(f => 
+          f.name.toLowerCase().includes('transaction') || 
+          f.label.toLowerCase().includes('transaction') ||
+          f.name.toLowerCase().includes('tx')
+        );
+        if (txField && formData[txField.name]) {
+          requestData.transactionId = formData[txField.name];
+        }
       }
+
+      console.log("Sending request data:", requestData);
 
       const response = await depositRequestService.createRequest(requestData);
       
@@ -401,6 +452,8 @@ export default function DepositPage() {
         setAmountError(null);
         setUploadStatus('idle');
         setUploadedFileUrl("");
+        
+        console.log("Form reset successfully");
       }
     } catch (error) {
       console.error("Failed to submit deposit request:", error);
@@ -408,6 +461,19 @@ export default function DepositPage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // Get appropriate icon for field type
+  const getFieldIcon = (field: FormField) => {
+    if (field.type === 'number') return <Hash className="w-4 h-4 text-gray-400" />;
+    if (field.type === 'textarea') return <FileText className="w-4 h-4 text-gray-400" />;
+    if (field.name.toLowerCase().includes('phone') || field.name.toLowerCase().includes('sender')) 
+      return <Phone className="w-4 h-4 text-gray-400" />;
+    if (field.name.toLowerCase().includes('name')) 
+      return <UserIcon className="w-4 h-4 text-gray-400" />;
+    if (field.name.toLowerCase().includes('email')) 
+      return <Mail className="w-4 h-4 text-gray-400" />;
+    return <FileText className="w-4 h-4 text-gray-400" />;
   };
 
   // Get icon for payment method
@@ -462,12 +528,13 @@ export default function DepositPage() {
       <div className="relative h-16 flex items-center justify-between px-4 border-b border-gray-800">
         <BackButton />
         <h1 className="text-xl font-bold flex-1 text-center">Deposit</h1>
-      <button
-  onClick={() => router.push("/history")}
-  className="w-10 h-10 rounded-full bg-black/30 flex items-center justify-center hover:bg-black/50"
->
-  <ClipboardClock className="w-5 h-5" />
-</button>
+        <button
+          onClick={() => router.push("/dashboard/deposit-history")}
+          className="w-10 h-10 rounded-full bg-black/30 flex items-center justify-center hover:bg-black/50"
+          title="View History"
+        >
+          <ClipboardClock className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Tabs */}
@@ -536,7 +603,7 @@ export default function DepositPage() {
         </div>
       )}
 
-      {/* Promotions Banner - Only show if there are active promotions for current tab and no promotion selected */}
+      {/* Promotions Banner */}
       {promotions.filter(p => p.isActive).length > 0 && !selectedPromotion && (
         <div className="px-4 mt-2 mb-4">
           <div className="bg-gradient-to-r from-purple-900/50 to-pink-900/50 rounded-2xl p-4 border border-purple-500/30">
@@ -599,9 +666,10 @@ export default function DepositPage() {
 
       {/* Tab Content */}
       <div className="max-w-md mx-auto px-4 mt-4">
+        {/* Manual Tab */}
         {activeTab === "manual" && (
           <form onSubmit={handleSubmit} className="bg-[#252334] rounded-2xl p-5 border border-gray-800/50">
-            {/* Payment Methods - Make them selectable */}
+            {/* Payment Methods */}
             {paymentMethods.length > 0 && (
               <div className="grid grid-cols-3 gap-3 mb-5">
                 {paymentMethods.map((method) => (
@@ -638,7 +706,7 @@ export default function DepositPage() {
               </div>
             )}
 
-            {/* Form Fields */}
+            {/* Dynamic Form Fields */}
             <div className="space-y-4">
               {formFields
                 .sort((a, b) => a.order - b.order)
@@ -649,14 +717,14 @@ export default function DepositPage() {
                         <input
                           type="file"
                           accept="image/*"
-                          onChange={handleFileUpload}
+                          onChange={(e) => handleFileUpload(e, field.name)}
                           className="hidden"
-                          id="screenshot-upload-manual"
+                          id={`screenshot-${field._id}`}
                         />
                         <label
-                          htmlFor="screenshot-upload-manual"
+                          htmlFor={`screenshot-${field._id}`}
                           className={`block w-full rounded-xl px-4 py-3 text-center cursor-pointer transition font-medium ${
-                            uploadStatus === 'success' 
+                            formData[field.name] 
                               ? 'bg-green-600 text-white' 
                               : uploadStatus === 'error'
                               ? 'bg-red-600 text-white'
@@ -664,11 +732,11 @@ export default function DepositPage() {
                           }`}
                         >
                           {uploadStatus === 'uploading' ? 'Uploading...' : 
-                           uploadStatus === 'success' ? 'Upload Successful!' :
+                           formData[field.name] ? 'Upload Successful!' :
                            uploadStatus === 'error' ? 'Upload Failed. Try Again.' :
                            field.label}
                         </label>
-                        {uploadStatus === 'success' && (
+                        {formData[field.name] && (
                           <div className="absolute right-3 top-1/2 -translate-y-1/2">
                             <CheckCircle className="w-5 h-5 text-white" />
                           </div>
@@ -676,18 +744,21 @@ export default function DepositPage() {
                       </div>
                     ) : (
                       <div className="relative">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                          {getFieldIcon(field)}
+                        </div>
                         <input
                           type={field.type}
                           value={formData[field.name] || ''}
                           onChange={(e) => handleInputChange(field.name, e.target.value)}
                           placeholder={
                             field.name === amountFieldName && minDepositAmount
-                              ? `Min: ৳${minDepositAmount} (Enter amount)`
+                              ? `Min: ৳${minDepositAmount} - ${field.placeholder || field.label}`
                               : field.placeholder || `Enter ${field.label}`
                           }
                           required={field.required}
                           min={field.name === amountFieldName && minDepositAmount ? minDepositAmount : undefined}
-                          className={`w-full bg-white border-0 rounded-xl px-4 py-3 text-black text-center text-lg placeholder-black focus:outline-none focus:ring-2 ${
+                          className={`w-full bg-white border-0 rounded-xl pl-10 pr-4 py-3 text-black text-center text-lg placeholder-black focus:outline-none focus:ring-2 ${
                             amountError && field.name === amountFieldName ? 'focus:ring-red-400 border-2 border-red-400' : 'focus:ring-green-400'
                           }`}
                         />
@@ -731,6 +802,7 @@ export default function DepositPage() {
           </form>
         )}
 
+        {/* Auto Tab */}
         {activeTab === "auto" && (
           <form onSubmit={handleSubmit} className="bg-[#252334] rounded-2xl p-5 border border-gray-800/50 text-center">
             <div className="mb-6">
@@ -740,7 +812,7 @@ export default function DepositPage() {
                 </p>
               </div>
 
-              {/* Payment Methods for Auto - Make them selectable */}
+              {/* Payment Methods */}
               {paymentMethods.length > 0 && (
                 <div className="flex justify-center gap-4 mb-4">
                   {paymentMethods.map((method) => (
@@ -787,24 +859,27 @@ export default function DepositPage() {
               </div>
             )}
 
-            {/* Form Fields */}
+            {/* Dynamic Form Fields */}
             <div className="space-y-4">
               {formFields
                 .sort((a, b) => a.order - b.order)
                 .map((field) => (
                   <div key={field._id} className="relative">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                      {getFieldIcon(field)}
+                    </div>
                     <input
                       type={field.type}
                       value={formData[field.name] || ''}
                       onChange={(e) => handleInputChange(field.name, e.target.value)}
                       placeholder={
                         field.name === amountFieldName && minDepositAmount
-                          ? `Min: ৳${minDepositAmount} (Enter amount)`
+                          ? `Min: ৳${minDepositAmount} - ${field.placeholder || field.label}`
                           : field.placeholder || `Enter ${field.label}`
                       }
                       required={field.required}
                       min={field.name === amountFieldName && minDepositAmount ? minDepositAmount : undefined}
-                      className={`w-full bg-[#fdfde8] border-0 rounded-xl px-4 py-4 text-black text-center text-xl placeholder-black border-2 ${
+                      className={`w-full bg-[#fdfde8] border-0 rounded-xl pl-10 pr-4 py-4 text-black text-center text-xl placeholder-black border-2 ${
                         amountError && field.name === amountFieldName ? 'border-red-400' : 'border-[#d12d4d]'
                       } focus:outline-none focus:ring-2 focus:ring-red-400`}
                     />
@@ -843,9 +918,10 @@ export default function DepositPage() {
           </form>
         )}
 
+        {/* Crypto Tab */}
         {activeTab === "crypto" && (
           <form onSubmit={handleSubmit} className="bg-[#252334] rounded-2xl p-5 border border-gray-800/50">
-            {/* Network Selection - Make them selectable */}
+            {/* Network Selection */}
             <div className="grid grid-cols-2 gap-3 mb-5">
               {paymentMethods.map((method) => (
                 <div 
@@ -906,59 +982,63 @@ export default function DepositPage() {
               </div>
             </div>
 
-            {/* Form Fields */}
+            {/* Dynamic Form Fields */}
             <div className="space-y-4 mt-5">
               {formFields
                 .sort((a, b) => a.order - b.order)
                 .map((field) => {
                   if (field.type === 'textarea') {
                     return (
-                      <div key={field._id}>
+                      <div key={field._id} className="relative">
+                        <div className="absolute left-3 top-3">
+                          {getFieldIcon(field)}
+                        </div>
                         <textarea
                           value={formData[field.name] || ''}
                           onChange={(e) => handleInputChange(field.name, e.target.value)}
                           placeholder={field.placeholder || `Enter ${field.label}`}
                           rows={2}
                           required={field.required}
-                          className="w-full bg-gradient-to-r from-red-500 to-red-600 border-0 rounded-xl px-4 py-3 text-white text-center border-2 border-[#fc0613] placeholder-white/80"
+                          className="w-full bg-gradient-to-r from-red-500 to-red-600 border-0 rounded-xl pl-10 pr-4 py-3 text-white text-center border-2 border-[#fc0613] placeholder-white/80"
                         />
                       </div>
                     );
                   }
 
-                  if (field.type === 'screenshot' || field.label.toLowerCase().includes('scanshot') || field.label.toLowerCase().includes('screenshot')) {
+                  if (field.type === 'screenshot' || field.label.toLowerCase().includes('screenshot')) {
                     return (
                       <div key={field._id}>
                         <div className="relative">
                           <input
                             type="file"
                             accept="image/*"
-                            onChange={handleFileUpload}
+                            onChange={(e) => handleFileUpload(e, field.name)}
                             className="hidden"
-                            id="screenshot-upload-crypto"
+                            id={`screenshot-${field._id}`}
                           />
                           <label
+                            htmlFor={`screenshot-${field._id}`}
                             className={`flex items-center justify-center w-full rounded-xl overflow-hidden cursor-pointer transition shadow-md relative
-                              ${uploadStatus === 'success' ? 'bg-green-500' :
+                              ${formData[field.name] ? 'bg-green-500' :
                                 uploadStatus === 'error' ? 'bg-red-500' :
                                   'bg-white border border-gray-300'}`}
                           >
                             <div className="flex-1 text-center py-3">
-                              {uploadStatus === 'idle' && (
-                                <span className="text-gray-800 font-semibold">{field.label}</span>
-                              )}
                               {uploadStatus === 'uploading' && (
                                 <span className="text-gray-700 font-semibold">Uploading...</span>
                               )}
-                              {uploadStatus === 'success' && (
+                              {formData[field.name] && (
                                 <span className="text-white font-semibold">Upload successful!</span>
+                              )}
+                              {!formData[field.name] && uploadStatus !== 'uploading' && uploadStatus !== 'error' && (
+                                <span className="text-gray-800 font-semibold">{field.label}</span>
                               )}
                               {uploadStatus === 'error' && (
                                 <span className="text-white font-semibold">Upload failed. Try again.</span>
                               )}
                             </div>
                             <div className={`absolute right-3 px-3 py-2 rounded-lg
-                              ${uploadStatus === 'success' ? 'bg-green-600' :
+                              ${formData[field.name] ? 'bg-green-600' :
                                 uploadStatus === 'error' ? 'bg-red-600' :
                                   'bg-pink-500 hover:bg-pink-600'}`}
                             >
@@ -972,18 +1052,21 @@ export default function DepositPage() {
 
                   return (
                     <div key={field._id} className="relative">
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                        {getFieldIcon(field)}
+                      </div>
                       <input
                         type={field.type}
                         value={formData[field.name] || ''}
                         onChange={(e) => handleInputChange(field.name, e.target.value)}
                         placeholder={
                           field.name === amountFieldName && minDepositAmount
-                            ? `Min: ৳${minDepositAmount} (Enter amount)`
+                            ? `Min: ৳${minDepositAmount} - ${field.placeholder || field.label}`
                             : field.placeholder || `Enter ${field.label}`
                         }
                         required={field.required}
                         min={field.name === amountFieldName && minDepositAmount ? minDepositAmount : undefined}
-                        className={`w-full bg-[#fdfde8] border-0 rounded-xl px-4 py-3 text-black border-2 ${
+                        className={`w-full bg-[#fdfde8] border-0 rounded-xl pl-10 pr-4 py-3 text-black border-2 ${
                           amountError && field.name === amountFieldName ? 'border-red-400' : 'border-[#fc0613]'
                         } text-center placeholder-black focus:outline-none focus:ring-2 focus:ring-red-400`}
                       />
