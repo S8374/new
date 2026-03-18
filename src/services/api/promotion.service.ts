@@ -2,6 +2,7 @@
 import api from "../api";
 
 export interface Promotion {
+  iconUrl: string;
   _id: string;
   tab: string; // manual, auto, crypto
   bonusName: string;

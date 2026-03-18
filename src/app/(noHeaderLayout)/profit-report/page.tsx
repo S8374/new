@@ -1,12 +1,15 @@
 import BackButton from '@/components/ui/BackButton';
 import { Calendar, TrendingUp } from 'lucide-react';
+import { Suspense } from 'react';
 
 const page = () => {
   return (
     <div className="flex flex-col h-screen bg-gray-900 text-white">
       {/* Header */}
       <header className="p-4 border-b border-gray-800 flex items-center justify-between">
-        <BackButton fallback='/'/>
+        <Suspense fallback={<div>Loading...</div>}>
+          <BackButton fallback='/' />
+        </Suspense>
         <h1 className="text-xl font-semibold">Profit Report</h1>
         <div className="flex items-center space-x-2">
           <span className="text-sm text-gray-400">Today</span>

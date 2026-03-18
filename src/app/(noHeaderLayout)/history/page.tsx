@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import {
   Clock,
   CheckCircle,
@@ -127,7 +127,9 @@ export default function DepositHistoryPage() {
     return (
       <div className="min-h-screen bg-[#1E1D2A] text-white">
         <div className="relative h-16 flex items-center px-4 border-b border-gray-800">
-          <BackButton />
+          <Suspense fallback={<div>Loading...</div>}>
+            <BackButton />
+          </Suspense>
           <h1 className="text-xl font-bold flex-1 text-center">Deposit History</h1>
           <div className="w-10" />
         </div>
@@ -142,7 +144,9 @@ export default function DepositHistoryPage() {
     <div className="min-h-screen bg-[#1E1D2A] text-white pb-10">
       {/* Header */}
       <div className="relative h-16 flex items-center px-4 border-b border-gray-800">
-        <BackButton />
+          <Suspense fallback={<div>Loading...</div>}>
+      <BackButton />
+    </Suspense>
         <h1 className="text-xl font-bold flex-1 text-center">Deposit History</h1>
         <button
           onClick={fetchRequests}
@@ -190,13 +194,12 @@ export default function DepositHistoryPage() {
                 setStatusFilter(status);
                 setCurrentPage(1);
               }}
-              className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${
-                statusFilter === status
-                  ? status === 'all' 
+              className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition ${statusFilter === status
+                  ? status === 'all'
                     ? 'bg-blue-600 text-white'
                     : getStatusBadge(status).bg + ' ' + getStatusBadge(status).text
                   : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-              }`}
+                }`}
             >
               {status === 'all' ? 'All' : status.charAt(0) + status.slice(1).toLowerCase()}
             </button>
@@ -227,7 +230,7 @@ export default function DepositHistoryPage() {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-white font-semibold">৳{request.amount}</span>
-                      {request.bonusAmount > 0 && (
+                      {(request.bonusAmount ?? 0) > 0 && (
                         <span className="text-xs bg-pink-600/30 text-pink-400 px-2 py-0.5 rounded-full flex items-center gap-1">
                           <Gift className="w-3 h-3" />
                           +৳{request.bonusAmount}
@@ -306,9 +309,8 @@ export default function DepositHistoryPage() {
             <div className="space-y-4">
               {/* Status Badge */}
               <div className="flex justify-center">
-                <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm ${
-                  getStatusBadge(selectedRequest.status).bg
-                } ${getStatusBadge(selectedRequest.status).text}`}>
+                <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm ${getStatusBadge(selectedRequest.status).bg
+                  } ${getStatusBadge(selectedRequest.status).text}`}>
                   {getStatusBadge(selectedRequest.status).icon}
                   {getStatusBadge(selectedRequest.status).label}
                 </span>
@@ -318,14 +320,14 @@ export default function DepositHistoryPage() {
               <div className="bg-gray-800 rounded-xl p-4 text-center">
                 <div className="text-sm text-gray-400 mb-1">Deposit Amount</div>
                 <div className="text-3xl font-bold text-white">৳{selectedRequest.amount}</div>
-                {selectedRequest.bonusAmount > 0 && (
+                {(selectedRequest.bonusAmount ?? 0) > 0 && (
                   <>
                     <div className="text-sm text-gray-400 mt-2 mb-1">Bonus</div>
                     <div className="text-xl font-bold text-green-400">+ ৳{selectedRequest.bonusAmount}</div>
                     <div className="mt-2 pt-2 border-t border-gray-700">
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-400">Total</span>
-                        <span className="text-white font-bold">৳{selectedRequest.amount + selectedRequest.bonusAmount}</span>
+                        <span className="text-white font-bold">৳{selectedRequest.amount + (selectedRequest.bonusAmount ?? 0)}</span>
                       </div>
                     </div>
                   </>
@@ -380,8 +382,8 @@ export default function DepositHistoryPage() {
                     <div className="flex justify-between">
                       <span className="text-gray-400">Value:</span>
                       <span className="text-white">
-                        {selectedRequest.promotionType === 'PERCENT' 
-                          ? `${selectedRequest.promotionValue}%` 
+                        {selectedRequest.promotionType === 'PERCENT'
+                          ? `${selectedRequest.promotionValue}%`
                           : `৳${selectedRequest.promotionValue}`}
                       </span>
                     </div>

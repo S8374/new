@@ -25,7 +25,6 @@ const HotTabCOntent = () => {
     <div className="max-w-4xl mx-auto">
       <SearchField
         onSearch={(q) => setSearchQuery(q)}
-        onTypeSelect={setSelectedType}
         className="mb-6"
       />
 

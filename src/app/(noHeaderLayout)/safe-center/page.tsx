@@ -1,11 +1,12 @@
-import SafeCenter from "@/components/commonLayout/pages/account/SafeCenter"
+import { Suspense } from "react";
+import SafeCenter from "@/components/commonLayout/pages/account/SafeCenter";
 
 const page = () => {
   return (
-    <div>
-        <SafeCenter/>
-    </div>
-  )
-}
+    <Suspense fallback={null}>
+      <SafeCenter />
+    </Suspense>
+  );
+};
 
-export default page
+export default page;

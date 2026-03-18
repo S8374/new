@@ -4,7 +4,7 @@
 import BackButton from "@/components/ui/BackButton";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 export default function PromotionDetailPage() {
     // Simulate loading or fetch from API later
@@ -29,8 +29,10 @@ export default function PromotionDetailPage() {
         <div className="min-h-screen bg-linear-to-b from-[#1A1826] to-[#2D2C3A] pb-20">
             <div className="relative h-14 flex items-center px-4 bg-linear-to-r from-[#0F0D2A] to-[#3A1C71]">
                 {/* Back Button */}
-                  <BackButton fallback="/" />
+  <Suspense fallback={<div>Loading...</div>}>
+                      <BackButton fallback="/" />
 
+    </Suspense>
                 {/* Title - centered */}
                 <h1 className="text-xl font-bold text-white mx-auto">ytaeryre</h1>
 

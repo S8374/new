@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import {
   Wallet as WalletIcon,
   Copy,
@@ -88,14 +88,14 @@ export default function MyWalletPage() {
   const handleUpdateWallet = async () => {
     try {
       setUpdating(true);
-      
+
       const updateData: any = {};
       if (editForm.walletPassword) updateData.walletPassword = editForm.walletPassword;
       if (editForm.walletAddress) updateData.walletAddress = editForm.walletAddress;
       if (editForm.protocol) updateData.protocol = editForm.protocol;
 
       const response = await walletService.updateWallet(updateData);
-      
+
       if (response?.success) {
         toast.success("Wallet updated successfully!");
         setIsEditing(false);
@@ -131,7 +131,10 @@ export default function MyWalletPage() {
     return (
       <div className="min-h-screen bg-[#1E1D2A] text-white">
         <div className="relative h-16 flex items-center px-4 border-b border-gray-800">
-          <BackButton />
+
+          <Suspense fallback={<div>Loading...</div>}>
+            <BackButton />
+          </Suspense>
           <h1 className="text-xl font-bold flex-1 text-center">My Wallet</h1>
           <div className="w-10" />
         </div>
@@ -302,7 +305,7 @@ export default function MyWalletPage() {
                 <input
                   type="text"
                   value={editForm.walletAddress}
-                  onChange={(e) => setEditForm({...editForm, walletAddress: e.target.value})}
+                  onChange={(e) => setEditForm({ ...editForm, walletAddress: e.target.value })}
                   placeholder="Enter wallet address"
                   className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
                 />
@@ -315,7 +318,7 @@ export default function MyWalletPage() {
                 </label>
                 <select
                   value={editForm.protocol}
-                  onChange={(e) => setEditForm({...editForm, protocol: e.target.value as any})}
+                  onChange={(e) => setEditForm({ ...editForm, protocol: e.target.value as any })}
                   className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
                 >
                   <option value="">Select Protocol</option>
@@ -333,7 +336,7 @@ export default function MyWalletPage() {
                 <input
                   type="password"
                   value={editForm.walletPassword}
-                  onChange={(e) => setEditForm({...editForm, walletPassword: e.target.value})}
+                  onChange={(e) => setEditForm({ ...editForm, walletPassword: e.target.value })}
                   placeholder="Enter wallet password"
                   className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
                 />

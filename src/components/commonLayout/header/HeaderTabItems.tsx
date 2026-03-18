@@ -160,6 +160,7 @@ const HeaderTabItems = () => {
   const homeTab = {
     id: "home",
     label: t('tabs.home', 'Home'),
+    translatedLabel: t('tabs.home', 'Home'),
     icon: iconMap.home
   };
 
@@ -241,7 +242,7 @@ const HeaderTabItems = () => {
             <DynamicTabContent 
               sliderTypeId={tab._id} 
               sliderTypeName={tab.label}
-              translatedName={tab.translatedLabel}
+              translatedName={String(tab.translatedLabel)}
             />
           </TabsContent>
         ))}
@@ -336,7 +337,7 @@ const DynamicTabContent = ({
         title={searchQuery ? t('common.search_results', 'Search Results') : `${displayName} ${t('common.games', 'Games')}`}
         rounded={false}
         icon="🎮"
-        cardWidth={{ base: "140px", sm: "140px", md: "160px" }}
+        cardWidth={{ base: "130px" }}
         cardHeight="160px"
         spaceBetween={12}
       />

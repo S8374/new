@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import Cookies from "js-cookie";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
+import { authService } from "@/services/api/auth.services";
 
 interface Props {
   href: string;
@@ -10,11 +11,21 @@ interface Props {
 }
 
 export default function ProtectedLink({ href, children }: Props) {
-  const handleClick = (e: React.MouseEvent) => {
-    const token = Cookies.get("accessToken");
+  const router = useRouter();
 
-    if (!token) {
-      e.preventDefault();
+  const handleClick = async (e: React.MouseEvent) => {
+    e.preventDefault(); // 🔥 always stop default
+
+    try {
+      const res = await authService.me(undefined);
+
+      if (res?.statusCode === 200) {
+        // ✅ user valid → go
+        router.push(href);
+      } else {
+        toast.error("Please login first");
+      }
+    } catch (err) {
       toast.error("Please login first");
     }
   };

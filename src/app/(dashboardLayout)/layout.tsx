@@ -5,6 +5,7 @@ import DashboardSidebar from "@/sidebar/DashboardSidebar";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { UserRole } from "@/types/user.role";
 
 export default function DashboardLayout({
   children,
@@ -12,6 +13,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { user, loading } = useAuth();
+  console.log("DashboardLayout: User:", user, "Loading:", loading);
   const router = useRouter();
 
   // 🔐 Protect dashboard
@@ -29,7 +31,7 @@ export default function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      <DashboardSidebar role={user.role} />
+      <DashboardSidebar role={user.role as UserRole} />
 
       <div className="flex flex-col flex-1">
         <DashboardHeader />

@@ -149,7 +149,7 @@ const SliderManagementPage = () => {
 
     const toggleSliderStatus = async (sliderId: string, currentStatus: boolean, sliderTitle: string) => {
         try {
-            await sliderService.updateSlider(sliderId, { isActive: !currentStatus });
+            await sliderService.updateSlider(sliderId, { ...{}, isActive: !currentStatus } as any);
             toast.success(`"${sliderTitle}" ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
             fetchData();
         } catch (error) {

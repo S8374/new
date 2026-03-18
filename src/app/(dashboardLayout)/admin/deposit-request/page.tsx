@@ -334,7 +334,7 @@ export default function AdminDepositRequests() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="text-sm font-bold">৳{request.amount}</div>
-                          {request.bonusAmount > 0 && (
+                          {(request.bonusAmount ?? 0) > 0 && (
                             <div className="text-xs text-green-400 flex items-center gap-1">
                               <Gift className="w-3 h-3" />
                               +৳{request.bonusAmount}
@@ -476,7 +476,7 @@ export default function AdminDepositRequests() {
                     <span className="text-gray-300">Amount:</span>
                     <span className="text-white font-bold">৳{selectedRequest.amount}</span>
                   </div>
-                  {selectedRequest.bonusAmount > 0 && (
+                  {(selectedRequest.bonusAmount ?? 0) > 0 && (
                     <div className="flex justify-between">
                       <span className="text-gray-300">Bonus:</span>
                       <span className="text-green-400">+ ৳{selectedRequest.bonusAmount}</span>
@@ -646,7 +646,7 @@ export default function AdminDepositRequests() {
             <h3 className="text-xl font-bold text-white mb-4">Approve Deposit Request</h3>
             <p className="text-gray-300 mb-4">
               Are you sure you want to approve this deposit of <span className="font-bold text-green-400">৳{selectedRequest.amount}</span>?
-              {selectedRequest.bonusAmount > 0 && (
+              {(selectedRequest.bonusAmount ?? 0) > 0 && (
                 <> Bonus of <span className="font-bold text-green-400">৳{selectedRequest.bonusAmount}</span> will be added to the user's wallet.</>
               )}
             </p>

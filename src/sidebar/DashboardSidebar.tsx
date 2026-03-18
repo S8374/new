@@ -114,7 +114,7 @@ export default function DashboardSidebar({ role }: SidebarProps) {
                         whileTap={{ scale: 0.98 }}
                       >
                         <div className="flex items-center gap-3">
-                          <Icon className="h-5 w-5 flex-shrink-0" />
+                          {Icon && <Icon className="h-5 w-5 flex-shrink-0" />}
                           <span className="truncate font-medium">{item.title}</span>
                         </div>
                         <motion.div
@@ -154,7 +154,7 @@ export default function DashboardSidebar({ role }: SidebarProps) {
                                         : "text-white/60 hover:text-white hover:bg-white/10"
                                     )}
                                   >
-                                    <SubIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                                    {SubIcon && <SubIcon className="h-3.5 w-3.5 flex-shrink-0" />}
                                     <span className="truncate">{subItem.title}</span>
                                     {subItem.badge && (
                                       <Badge variant="secondary" className="ml-auto text-[10px] px-1.5">
@@ -180,7 +180,7 @@ export default function DashboardSidebar({ role }: SidebarProps) {
                             : "text-white/70 hover:text-white hover:bg-white/10"
                         )}
                       >
-                        <Icon className="h-5 w-5 flex-shrink-0" />
+                        {Icon && <Icon className="h-5 w-5 flex-shrink-0" />}
                         <span className="truncate font-medium">{item.title}</span>
                         {item.badge && (
                           <Badge variant="secondary" className="ml-auto text-[10px] px-1.5">

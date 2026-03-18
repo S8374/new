@@ -17,7 +17,7 @@ import {
   ArrowDown,
   Image as ImageIcon
 } from "lucide-react";
-import { partnerService } from "@/services/api/partner.service";
+import { Partner, partnerService } from "@/services/api/partner.service";
 
 export default function PartnerManagement() {
   const [partners, setPartners] = useState<Partner[]>([]);

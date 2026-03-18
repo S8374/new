@@ -10,6 +10,7 @@ import {
   Download as DownloadIcon,
   ChevronLeft,
 } from "lucide-react";
+import { Suspense } from "react";
 
 export default function SoftwareDownloads() {
    
@@ -61,8 +62,10 @@ export default function SoftwareDownloads() {
     <div className="min-h-screen bg-[#252334] text-white pb-20">
       {/* Header */}
       <div className="sticky top-0 z-10 h-16 flex items-center px-4 border-b border-gray-800 bg-[#252334]">
-         <BackButton className="mr-3" fallback="/" />
-
+ 
+  <Suspense fallback={<div>Loading...</div>}>
+        <BackButton className="mr-3" fallback="/" />
+    </Suspense>
         <h1 className="text-xl font-bold">Software Downloads</h1>
       </div>
 

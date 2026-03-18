@@ -3,7 +3,6 @@
 import { useTranslation } from "@/hooks/useTranslation";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import Cookies from "js-cookie";
 import toast from "react-hot-toast";
 import { authService } from "@/services/api/auth.services";
 

@@ -21,7 +21,7 @@ export default function MyIncomePage() {
         <div className="bg-[#252334] rounded-xl p-4 mb-4">
           <div className="flex justify-between items-center mb-3">
             <span className="font-bold text-white">Cashback rewards</span>
-            <span="text-yellow-400 text-sm">up to 1.2% &gt;</span>
+            <span className="text-yellow-400 text-sm">up to 1.2% &gt;</span>
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">

@@ -3,7 +3,7 @@
 import StepTaskCard from "@/components/reUseAbleItems/TaskCard"
 import BackButton from "@/components/ui/BackButton";
 import { ArrowLeft } from "lucide-react"
-import { useState } from "react";
+import { Suspense, useState } from "react";
 
 const page = () => {
     const [step, setStep] = useState(2);
@@ -12,8 +12,10 @@ const page = () => {
         <div>
             <div className="relative h-14 flex items-center px-4 bg-gradient-to-r from-[#0F0D2A] to-[#3A1C71]">
                 {/* Back Button */}
-                <BackButton fallback="/" />
+  <Suspense fallback={<div>Loading...</div>}>
+                      <BackButton fallback="/" />
 
+    </Suspense>
                 {/* Title - centered */}
                 <h1 className="text-xl font-bold text-white mx-auto">ytaeryre</h1>
 

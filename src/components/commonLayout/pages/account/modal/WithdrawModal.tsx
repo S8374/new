@@ -20,6 +20,7 @@ interface WithdrawModalProps {
 }
 
 export default function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
+  const [activeTab, setActiveTab] = useState("USDT");
   const [walletAddress, setWalletAddress] = useState("");
   const [huioneName, setHuioneName] = useState("");
   const [phoneArea, setPhoneArea] = useState("");

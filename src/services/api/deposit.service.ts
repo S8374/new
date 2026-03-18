@@ -6,7 +6,7 @@ export interface PaymentMethod {
   name: string;
   slug: string;
   icon: string;
-  tab: string; // 'manual', 'auto', 'crypto'
+  tab: string;
   description?: string;
   order: number;
   isActive: boolean;
@@ -28,7 +28,7 @@ export interface Instruction {
   _id: string;
   step: number;
   text: string;
-  tab: string; // 'manual', 'auto', 'crypto'
+  tab: string;
   isActive: boolean;
 }
 
@@ -44,31 +44,38 @@ export interface FormField {
   label: string;
   name: string;
   tab: string;
-  type: 'text' | 'number' | 'textarea'|'screenshot';
+  type: 'text' | 'number' | 'textarea' | 'screenshot' | 'static'; // Added 'static'
   placeholder?: string;
   required: boolean;
   order: number;
   paymentMethodId?: string;
   isActive: boolean;
+  isBonusField?: boolean;
+  staticValue?: string;
+  isCopyable?: boolean;
 }
 
 export interface FormFieldData {
   label: string;
   name: string;
   tab: string;
-  type: 'text' | 'number' | 'textarea'|'screenshot';
+  type: 'text' | 'number' | 'textarea' | 'screenshot' | 'static'; // Added 'static'
   placeholder?: string;
   required?: boolean;
   order?: number;
   paymentMethodId?: string;
   isActive?: boolean;
+  isBonusField?: boolean;
+  staticValue?: string;
+  isCopyable?: boolean;
 }
-// ========== NEW: TITTLE/TITLE INTERFACES ==========
+
+// ========== TITTLE/TITLE INTERFACES ==========
 export interface Tittle {
   _id: string;
   title: string;
   description: string;
-  tab: string; // 'manual', 'auto', 'crypto'
+  tab: string;
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -168,38 +175,32 @@ export const depositService = {
     return response?.data;
   },
 
-    // ========== NEW: TITTLE/TITLE METHODS ==========
-  // Admin: Get all tittles
+  // ========== TITTLE/TITLE METHODS ==========
   async getAllTittles() {
     const response = await api.get("/payment-methods/tittle");
     return response?.data;
   },
 
-  // Admin: Create tittle
   async createTittle(data: TittleData) {
     const response = await api.post("/payment-methods/tittle", data);
     return response?.data;
   },
 
-  // Admin: Update tittle
   async updateTittle(id: string, data: Partial<TittleData>) {
     const response = await api.patch(`/payment-methods/tittle/${id}`, data);
     return response?.data;
   },
 
-  // Admin: Delete tittle
   async deleteTittle(id: string) {
     const response = await api.delete(`/payment-methods/tittle/${id}`);
     return response?.data;
   },
 
-  // Frontend: Get active tittles by tab
   async getActiveTittlesByTab(tab: string) {
     const response = await api.get(`/payment-methods/active/${tab}`);
     return response?.data;
   },
 
-  // Frontend: Get single tittle by id
   async getSingleTittle(id: string) {
     const response = await api.get(`/payment-methods/tittle/${id}`);
     return response?.data;

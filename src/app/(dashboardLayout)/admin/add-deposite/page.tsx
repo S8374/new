@@ -20,7 +20,10 @@ import {
   CheckCircle,
   Loader2,
   Star,
-  Type
+  Type,
+  Copy,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { depositService } from "@/services/api/deposit.service";
 import { promotionService, Promotion } from "@/services/api/promotion.service";
@@ -51,13 +54,15 @@ interface FormField {
   label: string;
   name: string;
   tab: TabType;
-  type: 'text' | 'number' | 'textarea' | 'screenshot';
+  type: 'text' | 'number' | 'textarea' | 'screenshot' | 'static';
   placeholder?: string;
   required: boolean;
   order: number;
   paymentMethodId?: string;
   isActive: boolean;
   isBonusField?: boolean;
+  staticValue?: string;
+  isCopyable?: boolean;
 }
 
 interface Tittle {
@@ -75,11 +80,11 @@ const generateSlug = (text: string) => {
   if (!text) return '';
   return text
     .toLowerCase()
-    .replace(/\s+/g, '-')           // Replace spaces with -
-    .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
-    .replace(/\-\-+/g, '-')         // Replace multiple - with single -
-    .replace(/^-+/, '')              // Trim - from start of text
-    .replace(/-+$/, '');             // Trim - from end of text
+    .replace(/\s+/g, '-')
+    .replace(/[^\w\-]+/g, '')
+    .replace(/\-\-+/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
 };
 
 export default function DepositManagement() {
@@ -126,13 +131,15 @@ export default function DepositManagement() {
   const [fieldForm, setFieldForm] = useState({
     label: '',
     name: '',
-    type: 'text' as const,
+    type: 'text' as 'text' | 'number' | 'textarea' | 'screenshot' | 'static',
     placeholder: '',
     required: false,
     order: 0,
     paymentMethodId: undefined as string | undefined,
     isActive: true,
-    isBonusField: false
+    isBonusField: false,
+    staticValue: '',
+    isCopyable: false
   });
 
   const [promotionForm, setPromotionForm] = useState({
@@ -155,7 +162,6 @@ export default function DepositManagement() {
   // Auto-generate slug preview when name changes
   useEffect(() => {
     if (!editingItem && methodForm.name && !methodForm.slug) {
-      // Only auto-generate if we're creating new and slug is empty
       setMethodForm(prev => ({
         ...prev,
         slug: generateSlug(prev.name)
@@ -242,7 +248,6 @@ export default function DepositManagement() {
       setMethodForm(prev => ({ ...prev, icon: imageUrl }));
       setMethodIconUploadStatus('success');
       
-      // Reset status after 3 seconds
       setTimeout(() => setMethodIconUploadStatus('idle'), 3000);
     } catch (error) {
       console.error("Error uploading icon:", error);
@@ -267,7 +272,6 @@ export default function DepositManagement() {
       setPromotionForm(prev => ({ ...prev, iconUrl: imageUrl }));
       setPromoIconUploadStatus('success');
       
-      // Reset status after 3 seconds
       setTimeout(() => setPromoIconUploadStatus('idle'), 3000);
     } catch (error) {
       console.error("Error uploading icon:", error);
@@ -281,18 +285,15 @@ export default function DepositManagement() {
   // ========== PAYMENT METHOD HANDLERS ==========
   const handleCreateMethod = async () => {
     try {
-      // Validate slug - ensure it's not empty
       if (!methodForm.slug && !methodForm.name) {
         alert("Please enter a name or slug");
         return;
       }
 
-      // Generate slug from name if not provided
       const slug = methodForm.slug 
         ? generateSlug(methodForm.slug)
         : generateSlug(methodForm.name);
       
-      // Check if slug is valid
       if (!slug) {
         alert("Invalid slug generated. Please check the name.");
         return;
@@ -314,7 +315,6 @@ export default function DepositManagement() {
     } catch (error: any) {
       console.error("Error creating payment method:", error);
       
-      // Check for duplicate key error
       if (error.response?.data?.message?.includes("duplicate key") || 
           error.message?.includes("duplicate key")) {
         alert(`A payment method with slug "${generateSlug(methodForm.slug || methodForm.name)}" already exists. Please use a different name.`);
@@ -327,7 +327,6 @@ export default function DepositManagement() {
   const handleUpdateMethod = async () => {
     if (!editingItem) return;
     try {
-      // Generate slug from name if not provided
       const slug = methodForm.slug 
         ? generateSlug(methodForm.slug)
         : generateSlug(methodForm.name);
@@ -439,6 +438,12 @@ export default function DepositManagement() {
   // ========== FORM FIELD HANDLERS ==========
   const handleCreateField = async () => {
     try {
+      // Validate static field
+      if (fieldForm.type === 'static' && !fieldForm.staticValue) {
+        alert("Static fields must have a static value");
+        return;
+      }
+
       // Check if trying to create a bonus field when one already exists
       if (fieldForm.isBonusField) {
         const existingBonusField = formFields.find(f => f.isBonusField === true);
@@ -457,9 +462,11 @@ export default function DepositManagement() {
         required: fieldForm.required,
         order: fieldForm.order,
         isActive: fieldForm.isActive,
-        isBonusField: fieldForm.isBonusField
+        isBonusField: fieldForm.isBonusField,
+        staticValue: fieldForm.staticValue,
+        isCopyable: fieldForm.isCopyable
       };
-
+     console.log("Creating form field with data:", fieldData);
       if (fieldForm.paymentMethodId && fieldForm.paymentMethodId.trim() !== '') {
         fieldData.paymentMethodId = fieldForm.paymentMethodId;
       }
@@ -471,11 +478,11 @@ export default function DepositManagement() {
       alert("Form field created successfully!");
     } catch (error: any) {
       console.error("Error creating form field:", error);
-      
-      // Check for bonus field validation error
       if (error.response?.data?.message?.includes("Bonus field already exists")) {
+        console.error("Bonus field creation error:", error);
         alert(error.response.data.message);
       } else {
+        console.error("General form field creation error:", error);
         alert("Failed to create form field. Please try again.");
       }
     }
@@ -484,6 +491,12 @@ export default function DepositManagement() {
   const handleUpdateField = async () => {
     if (!editingItem) return;
     try {
+      // Validate static field
+      if (fieldForm.type === 'static' && !fieldForm.staticValue) {
+        alert("Static fields must have a static value");
+        return;
+      }
+
       // Check if trying to make this a bonus field when another bonus field exists
       if (fieldForm.isBonusField) {
         const existingBonusField = formFields.find(f => 
@@ -503,7 +516,9 @@ export default function DepositManagement() {
         required: fieldForm.required,
         order: fieldForm.order,
         isActive: fieldForm.isActive,
-        isBonusField: fieldForm.isBonusField
+        isBonusField: fieldForm.isBonusField,
+        staticValue: fieldForm.staticValue,
+        isCopyable: fieldForm.isCopyable
       };
 
       if (fieldForm.paymentMethodId && fieldForm.paymentMethodId.trim() !== '') {
@@ -554,13 +569,18 @@ export default function DepositManagement() {
   // ========== PROMOTION HANDLERS ==========
   const handleCreatePromotion = async () => {
     try {
-      await promotionService.createPromotion({
+      const createData: any = {
         ...promotionForm,
         tab: activeTab,
         value: Number(promotionForm.value),
-        minDeposit: promotionForm.minDeposit ? Number(promotionForm.minDeposit) : undefined,
-        iconUrl: promotionForm.iconUrl || undefined
-      });
+        minDeposit: promotionForm.minDeposit ? Number(promotionForm.minDeposit) : undefined
+      };
+      
+      if (promotionForm.iconUrl) {
+        createData.iconUrl = promotionForm.iconUrl;
+      }
+      
+      await promotionService.createPromotion(createData);
       setShowPromotionModal(false);
       resetPromotionForm();
       fetchData();
@@ -574,12 +594,17 @@ export default function DepositManagement() {
   const handleUpdatePromotion = async () => {
     if (!editingItem) return;
     try {
-      await promotionService.updatePromotion(editingItem._id, {
+      const updateData: any = {
         ...promotionForm,
         value: Number(promotionForm.value),
-        minDeposit: promotionForm.minDeposit ? Number(promotionForm.minDeposit) : undefined,
-        iconUrl: promotionForm.iconUrl || undefined
-      });
+        minDeposit: promotionForm.minDeposit ? Number(promotionForm.minDeposit) : undefined
+      };
+      
+      if (promotionForm.iconUrl) {
+        updateData.iconUrl = promotionForm.iconUrl;
+      }
+      
+      await promotionService.updatePromotion(editingItem._id, updateData);
       setShowPromotionModal(false);
       setEditingItem(null);
       resetPromotionForm();
@@ -721,7 +746,9 @@ export default function DepositManagement() {
       order: formFields.length,
       paymentMethodId: undefined,
       isActive: true,
-      isBonusField: false
+      isBonusField: false,
+      staticValue: '',
+      isCopyable: false
     });
   };
 
@@ -781,7 +808,9 @@ export default function DepositManagement() {
       order: field.order,
       paymentMethodId: field.paymentMethodId,
       isActive: field.isActive,
-      isBonusField: field.isBonusField || false
+      isBonusField: field.isBonusField || false,
+      staticValue: field.staticValue || '',
+      isCopyable: field.isCopyable || false
     });
     setShowFieldModal(true);
   };
@@ -863,7 +892,7 @@ export default function DepositManagement() {
 
         {/* Content Sections */}
         <div className="bg-gray-800 rounded-b-lg p-6 space-y-8">
-          {/* Tittle/Title Section - NEW */}
+          {/* Tittle/Title Section */}
           <div>
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold text-white flex items-center gap-2">
@@ -1243,7 +1272,7 @@ export default function DepositManagement() {
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-wrap">
                         <h3 className="text-white font-semibold">{field.label}</h3>
                         <span className="text-xs bg-gray-600 px-2 py-1 rounded text-gray-300">
                           {field.type}
@@ -1256,21 +1285,50 @@ export default function DepositManagement() {
                         {field.isBonusField && (
                           <span className="text-xs bg-yellow-600 px-2 py-1 rounded text-white flex items-center gap-1">
                             <Star className="w-3 h-3" />
-                            Bonus Field
+                            Bonus
+                          </span>
+                        )}
+                        {field.type === 'static' && field.isCopyable && (
+                          <span className="text-xs bg-blue-600 px-2 py-1 rounded text-white flex items-center gap-1">
+                            <Copy className="w-3 h-3" />
+                            Copyable
                           </span>
                         )}
                       </div>
+                      
                       <p className="text-sm text-gray-400 mt-1">Name: {field.name}</p>
+                      
                       {field.placeholder && (
                         <p className="text-sm text-gray-400">Placeholder: {field.placeholder}</p>
                       )}
+                      
                       {field.paymentMethodId && (
                         <p className="text-xs text-blue-400 mt-1">
                           Linked to Payment Method: {field.paymentMethodId}
                         </p>
                       )}
+
+                      {/* Static value display */}
+                      {field.type === 'static' && field.staticValue && (
+                        <div className="mt-2 p-2 bg-blue-600/10 rounded-lg border border-blue-600/20">
+                          <p className="text-xs text-blue-400 mb-1">Static Value:</p>
+                          <div className="flex items-center justify-between">
+                            <code className="text-sm text-white font-mono bg-gray-900 px-2 py-1 rounded">
+                              {field.staticValue}
+                            </code>
+                            {field.isCopyable && (
+                              <span className="text-xs text-green-400 flex items-center gap-1">
+                                <Copy className="w-3 h-3" />
+                                Copyable
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                       <p className="text-xs text-gray-500 mt-2">Order: {field.order}</p>
                     </div>
+                    
                     <div className="flex gap-2 ml-4">
                       <button
                         onClick={() => handleToggleFieldActive(field)}
@@ -1603,7 +1661,7 @@ export default function DepositManagement() {
         </div>
       )}
 
-      {/* Form Field Modal */}
+      {/* Form Field Modal - Updated with Static Field Support */}
       {showFieldModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-gray-800 rounded-lg max-w-md w-full max-h-[90vh] flex flex-col">
@@ -1632,7 +1690,7 @@ export default function DepositManagement() {
                     value={fieldForm.label}
                     onChange={(e) => setFieldForm({...fieldForm, label: e.target.value})}
                     className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-                    placeholder="e.g., Amount"
+                    placeholder="e.g., Agent Number"
                     required
                   />
                 </div>
@@ -1643,12 +1701,10 @@ export default function DepositManagement() {
                     type="text"
                     value={fieldForm.name}
                     onChange={(e) => {
-                      // Auto-generate field name from label if empty
                       const newName = e.target.value || fieldForm.label.toLowerCase().replace(/\s+/g, '_');
                       setFieldForm({...fieldForm, name: newName});
                     }}
                     onBlur={(e) => {
-                      // Auto-fill name from label if name is empty
                       if (!fieldForm.name && fieldForm.label) {
                         const generatedName = fieldForm.label
                           .toLowerCase()
@@ -1658,7 +1714,7 @@ export default function DepositManagement() {
                       }
                     }}
                     className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-                    placeholder="e.g., amount (auto-generated from label)"
+                    placeholder="e.g., agent_number"
                     required
                   />
                   <p className="text-xs text-gray-400 mt-1">
@@ -1678,18 +1734,59 @@ export default function DepositManagement() {
                     <option value="number">Number</option>
                     <option value="textarea">Textarea</option>
                     <option value="screenshot">Screenshot</option>
+                    <option value="static">Static (Pre-filled, Read-only)</option>
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Placeholder</label>
-                  <input
-                    type="text"
-                    value={fieldForm.placeholder}
-                    onChange={(e) => setFieldForm({...fieldForm, placeholder: e.target.value})}
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-                  />
-                </div>
+                {/* Static Value Field - Only show when type is 'static' */}
+                {fieldForm.type === 'static' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">
+                        Static Value *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={fieldForm.staticValue}
+                          onChange={(e) => setFieldForm({...fieldForm, staticValue: e.target.value})}
+                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                          placeholder="e.g., 01712345678"
+                          required
+                        />
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1">
+                        This value will be displayed to users and cannot be edited
+                      </p>
+                    </div>
+
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="isCopyable"
+                        checked={fieldForm.isCopyable}
+                        onChange={(e) => setFieldForm({...fieldForm, isCopyable: e.target.checked})}
+                        className="h-4 w-4 text-blue-600 rounded bg-gray-700 border-gray-600"
+                      />
+                      <label htmlFor="isCopyable" className="ml-2 text-sm text-gray-300">
+                        Allow users to copy this value
+                      </label>
+                    </div>
+                  </>
+                )}
+
+                {/* Placeholder - Only show for non-static fields */}
+                {fieldForm.type !== 'static' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">Placeholder</label>
+                    <input
+                      type="text"
+                      value={fieldForm.placeholder}
+                      onChange={(e) => setFieldForm({...fieldForm, placeholder: e.target.value})}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                    />
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-1">Order</label>
@@ -1764,7 +1861,6 @@ export default function DepositManagement() {
                     id="isBonusField"
                     checked={fieldForm.isBonusField}
                     onChange={(e) => {
-                      // Warn if trying to set bonus field when one already exists
                       if (e.target.checked && bonusFieldExists && !editingItem) {
                         if (!confirm("A bonus field already exists. Setting this as bonus field will replace the existing one. Continue?")) {
                           return;
@@ -2106,7 +2202,7 @@ export default function DepositManagement() {
         </div>
       )}
 
-      {/* Tittle/Title Modal - NEW */}
+      {/* Tittle/Title Modal */}
       {showTittleModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-gray-800 rounded-lg max-w-md w-full p-6">

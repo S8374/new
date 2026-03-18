@@ -6,13 +6,17 @@ import {
   Box, 
   ChevronDown 
 } from 'lucide-react';
+import { Suspense } from 'react';
 
 const page = () => {
   return (
     <div className="flex flex-col h-screen bg-gray-900 text-white">
       {/* Header */}
       <header className="p-4 border-b border-gray-800 flex items-center justify-between">
-        <BackButton fallback='/'/>
+    
+          <Suspense  fallback={<div>Loading...</div>}>
+         <BackButton fallback='/'/>
+    </Suspense>
         <h1 className="text-xl font-semibold">Transaction Record</h1>
         <div className="relative">
           <button className="flex items-center space-x-1 bg-gray-800 rounded-lg px-3 py-1.5 text-sm">

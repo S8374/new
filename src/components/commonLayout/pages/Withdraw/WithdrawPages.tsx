@@ -9,9 +9,7 @@ const WithdrawPages = () => {
       const [phoneArea, setPhoneArea] = useState("");
       const [phoneNumber, setPhoneNumber] = useState("");
       const [withdrawAmount, setWithdrawAmount] = useState("");
-    function setWalletAddress(value: string): void {
-        throw new Error("Function not implemented.");
-    }
+      const [walletAddress, setWalletAddress] = useState("");
 
   return (
     <div>
@@ -77,7 +75,7 @@ const WithdrawPages = () => {
                         </div>
                         <div className="relative">
                           <select
-                            value={setWalletAddress}
+                            value={walletAddress}
                             onChange={(e) => setWalletAddress(e.target.value)}
                             className="w-full bg-[#252334] border border-gray-700 rounded-lg py-3 pl-3 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 appearance-none"
                           >

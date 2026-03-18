@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import {
   Wallet,
   Copy,
@@ -18,7 +18,10 @@ import {
   User as UserIcon,
   Mail,
   FileText,
-  Star
+  Star,
+  Type,
+  Info,
+  Check
 } from "lucide-react";
 import BackButton from "@/components/ui/BackButton";
 import { depositService } from "@/services/api/deposit.service";
@@ -52,18 +55,30 @@ interface FormField {
   label: string;
   name: string;
   tab: Tab;
-  type: 'text' | 'number' | 'textarea' | 'screenshot';
+  type: 'text' | 'number' | 'textarea' | 'screenshot' | 'static';
   placeholder?: string;
   required: boolean;
   order: number;
+  paymentMethodId?: string;
   isActive: boolean;
-  isBonusField?: boolean; // Add this field
+  isBonusField?: boolean;
+  staticValue?: string;
+  isCopyable?: boolean;
+}
+
+interface Tittle {
+  _id: string;
+  title: string;
+  description: string;
+  tab: Tab;
+  isActive: boolean;
 }
 
 export default function DepositPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("manual");
   const [copied, setCopied] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
   const [showPromoDetails, setShowPromoDetails] = useState(false);
@@ -76,7 +91,8 @@ export default function DepositPage() {
   const [amountFieldName, setAmountFieldName] = useState<string>("");
   const [amountField, setAmountField] = useState<FormField | null>(null);
   const [bonusField, setBonusField] = useState<FormField | null>(null);
-  const [tittle, setTittle] = useState<string>("");
+  const [tittle, setTittle] = useState<Tittle | null>(null);
+
   // Form state - will store all form field values dynamically
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [calculatedBonus, setCalculatedBonus] = useState<number | null>(null);
@@ -85,13 +101,14 @@ export default function DepositPage() {
   // Data from API
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [instructions, setInstructions] = useState<Instruction[]>([]);
-  const [formFields, setFormFields] = useState<FormField[]>([]);
+  const [allFormFields, setAllFormFields] = useState<FormField[]>([]); // Store all fields
+  const [filteredFormFields, setFilteredFormFields] = useState<FormField[]>([]); // Filtered by selection logic
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loading, setLoading] = useState(true);
 
   const walletAddress = "TEfuvvysBmXuUmBUxZGFM1J9a6LSVHGCP";
-  console.log("Component rendered, tittle:",tittle );
-  // Reset promotion selection when tab changes 
+
+  // Reset promotion selection when tab changes
   useEffect(() => {
     setSelectedPromotion(null);
     setCalculatedBonus(null);
@@ -103,21 +120,59 @@ export default function DepositPage() {
     setAmountFieldName("");
     setAmountField(null);
     setBonusField(null);
+    setTittle(null);
     setFormData({});
+    setFilteredFormFields([]);
   }, [activeTab]);
+
+  // Filter form fields based on selected payment method
+  useEffect(() => {
+    if (allFormFields.length > 0) {
+      let fieldsToShow = [];
+      
+      if (selectedMethod) {
+        // Show fields that are either:
+        // 1. Linked to this payment method
+        // 2. Not linked to any payment method
+        fieldsToShow = allFormFields.filter(field => 
+          !field.paymentMethodId || field.paymentMethodId === selectedMethod._id
+        );
+        
+        console.log(`Showing fields for ${selectedMethod.name}:`, fieldsToShow);
+      } else {
+        // Show ALL fields when no method selected
+        fieldsToShow = allFormFields;
+        console.log("No method selected, showing all fields:", fieldsToShow);
+      }
+      
+      setFilteredFormFields(fieldsToShow);
+      
+      // Initialize form data with empty strings or static values
+      const initialData: Record<string, string> = {};
+      fieldsToShow.forEach((field) => {
+        // For static fields, pre-fill with staticValue
+        if (field.type === 'static' && field.staticValue) {
+          initialData[field.name] = field.staticValue;
+        } else {
+          initialData[field.name] = formData[field.name] || '';
+        }
+      });
+      setFormData(prev => ({ ...prev, ...initialData }));
+    }
+  }, [selectedMethod, allFormFields]);
 
   // Fetch data based on active tab
   useEffect(() => {
     fetchTabData();
   }, [activeTab]);
 
-  // Find the amount field and bonus field whenever form fields change
+  // Find the amount field and bonus field whenever filtered form fields change
   useEffect(() => {
-    if (formFields.length > 0) {
-      console.log("All form fields:", formFields);
+    if (filteredFormFields.length > 0) {
+      console.log("Filtered form fields:", filteredFormFields);
 
-      // Find amount field - check for "Amount" exactly or includes amount
-      const amountField = formFields.find(f =>
+      // Find amount field
+      const amountField = filteredFormFields.find(f =>
         f.name === 'Amount' ||
         f.name.toLowerCase() === 'amount' ||
         f.label.toLowerCase().includes('amount') ||
@@ -130,7 +185,7 @@ export default function DepositPage() {
         console.log("Amount field identified:", amountField.name);
       } else {
         // If no amount field found, try first number field
-        const numberField = formFields.find(f => f.type === 'number');
+        const numberField = filteredFormFields.find(f => f.type === 'number');
         if (numberField) {
           setAmountFieldName(numberField.name);
           setAmountField(numberField);
@@ -138,14 +193,14 @@ export default function DepositPage() {
         }
       }
 
-      // Find bonus field (marked with isBonusField)
-      const bonusField = formFields.find(f => f.isBonusField === true);
+      // Find bonus field
+      const bonusField = filteredFormFields.find(f => f.isBonusField === true);
       if (bonusField) {
         setBonusField(bonusField);
         console.log("Bonus field identified:", bonusField.name);
       }
     }
-  }, [formFields]);
+  }, [filteredFormFields]);
 
   // Calculate bonus when amount changes
   useEffect(() => {
@@ -187,44 +242,49 @@ export default function DepositPage() {
     try {
       setLoading(true);
 
-      // Fetch payment methods for this tab
+      // Fetch payment methods
       const methodsRes = await depositService.getPaymentMethodByTab(activeTab);
       console.log("Payment methods:", methodsRes);
       if (methodsRes?.success) {
         setPaymentMethods(methodsRes.data || []);
-        // Auto-select first method if available
         if (methodsRes.data.length > 0) {
           setSelectedMethod(methodsRes.data[0]);
         }
       }
-      // Fetch page title for this tab
+
+      // Fetch page title
       const tittleRes = await depositService.getActiveTittlesByTab(activeTab);
       console.log("Page title:", tittleRes);
       if (tittleRes?.success && tittleRes.data && tittleRes.data.length > 0) {
         setTittle(tittleRes.data[0]);
       }
-      // Fetch instructions for this tab
+
+      // Fetch instructions
       const instructionsRes = await depositService.getInstructionsByTab(activeTab);
       if (instructionsRes?.success) {
         setInstructions(instructionsRes.data || []);
       }
 
-      // Fetch form fields for this tab
+      // Fetch all form fields
       const fieldsRes = await depositService.getFormFieldsByTab(activeTab);
-      console.log("Form fields received:", fieldsRes);
+      console.log("All form fields received:", fieldsRes);
 
       if (fieldsRes?.success) {
-        setFormFields(fieldsRes.data || []);
-        // Initialize form data with empty strings for all fields
+        setAllFormFields(fieldsRes.data || []);
+        // Initialize form data
         const initialData: Record<string, string> = {};
         fieldsRes.data.forEach((field: FormField) => {
-          initialData[field.name] = '';
+          if (field.type === 'static' && field.staticValue) {
+            initialData[field.name] = field.staticValue;
+          } else {
+            initialData[field.name] = '';
+          }
         });
         setFormData(initialData);
         console.log("Initialized form data with fields:", Object.keys(initialData));
       }
 
-      // Fetch promotions for this tab
+      // Fetch promotions
       const promotionsRes = await promotionService.getPromotionsByTab(activeTab);
       console.log("Promotions:", promotionsRes);
 
@@ -242,13 +302,11 @@ export default function DepositPage() {
   const calculateBonus = (amount: number) => {
     if (!selectedPromotion) return;
 
-    // Check if amount meets minimum deposit
     if (selectedPromotion.minDeposit && amount < selectedPromotion.minDeposit) {
       setCalculatedBonus(null);
       return;
     }
 
-    // Calculate bonus for selected promotion only
     let bonus = 0;
     if (selectedPromotion.type === 'PERCENT') {
       bonus = (amount * selectedPromotion.value) / 100;
@@ -260,7 +318,6 @@ export default function DepositPage() {
   };
 
   const handleSelectPromotion = (promo: Promotion) => {
-    // Check if promotion belongs to current tab
     if (promo.tab !== activeTab) {
       alert("This promotion is not available for the selected payment method");
       return;
@@ -269,7 +326,6 @@ export default function DepositPage() {
     setSelectedPromotion(promo);
     setShowPromoDetails(false);
 
-    // Show a message about minimum deposit
     if (promo.minDeposit) {
       alert(`Minimum deposit for ${promo.bonusName} is ৳${promo.minDeposit}`);
     }
@@ -277,7 +333,6 @@ export default function DepositPage() {
 
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
-    // Reset all promotion-related states
     setSelectedPromotion(null);
     setCalculatedBonus(null);
     setMinDepositAmount(null);
@@ -285,12 +340,19 @@ export default function DepositPage() {
     setAmountFieldName("");
     setAmountField(null);
     setBonusField(null);
+    setTittle(null);
   };
 
   const copyAddress = () => {
     navigator.clipboard.writeText(walletAddress);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const copyToClipboard = (text: string, fieldId: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(fieldId);
+    setTimeout(() => setCopiedField(null), 2000);
   };
 
   const handleInputChange = (name: string, value: string) => {
@@ -309,14 +371,10 @@ export default function DepositPage() {
 
     // Simulate upload - replace with actual ImageBB upload logic
     setTimeout(() => {
-      // Mock successful upload
       const mockUrl = `https://i.ibb.co/example/uploaded-${Date.now()}.jpg`;
       setUploadedFileUrl(mockUrl);
       setUploadStatus('success');
-
-      // Store the uploaded file URL in form data with the field name
       handleInputChange(fieldName, mockUrl);
-
       setTimeout(() => setUploadStatus('idle'), 3000);
     }, 2000);
   };
@@ -324,18 +382,15 @@ export default function DepositPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Log all form data before submission
     console.log("Submitting form with data:", formData);
-    console.log("All form fields:", formFields);
+    console.log("Filtered form fields:", filteredFormFields);
 
-    // Find the amount field - use the one we identified or try to find it
-    const amountFieldObj = amountField || formFields.find(f =>
+    const amountFieldObj = amountField || filteredFormFields.find(f =>
       f.name === 'Amount' ||
       f.name.toLowerCase() === 'amount' ||
       f.label.toLowerCase().includes('amount')
     );
 
-    // Check if amount is valid
     let amount = 0;
     if (amountFieldObj && formData[amountFieldObj.name]) {
       amount = parseFloat(formData[amountFieldObj.name]);
@@ -348,21 +403,18 @@ export default function DepositPage() {
       return;
     }
 
-    // Check minimum deposit for selected promotion
     if (selectedPromotion && selectedPromotion.minDeposit && amount < selectedPromotion.minDeposit) {
       alert(`Minimum deposit for ${selectedPromotion.bonusName} is ৳${selectedPromotion.minDeposit}`);
       return;
     }
 
-    // Check if payment method is selected
     if (!selectedMethod) {
       alert("Please select a payment method");
       return;
     }
 
-    // Check all required fields
-    const missingFields = formFields
-      .filter(f => f.required && !formData[f.name])
+    const missingFields = filteredFormFields
+      .filter(f => f.required && !formData[f.name] && f.type !== 'static')
       .map(f => f.label);
 
     if (missingFields.length > 0) {
@@ -373,15 +425,13 @@ export default function DepositPage() {
     try {
       setSubmitting(true);
 
-      // Prepare request data - this will include ALL form fields dynamically
       const requestData: any = {
         depositType: activeTab,
         paymentMethod: selectedMethod.name,
         amount: amount,
-        formData: formData, // This contains all form field values
+        formData: formData,
       };
 
-      // Add promotion if selected and bonus calculated
       if (selectedPromotion && calculatedBonus) {
         requestData.promotionId = selectedPromotion._id;
         requestData.promotionName = selectedPromotion.bonusName;
@@ -390,16 +440,13 @@ export default function DepositPage() {
         requestData.bonusAmount = calculatedBonus;
       }
 
-      // Find screenshot field if any
-      const screenshotField = formFields.find(f => f.type === 'screenshot');
+      const screenshotField = filteredFormFields.find(f => f.type === 'screenshot');
       if (screenshotField && formData[screenshotField.name]) {
         requestData.screenshot = formData[screenshotField.name];
       }
 
-      // For crypto/auto, extract common fields
       if (activeTab === 'crypto') {
-        // Find transaction ID field (if exists)
-        const txField = formFields.find(f =>
+        const txField = filteredFormFields.find(f =>
           f.name.toLowerCase().includes('transaction') ||
           f.label.toLowerCase().includes('transaction') ||
           f.name.toLowerCase().includes('tx')
@@ -408,8 +455,7 @@ export default function DepositPage() {
           requestData.transactionId = formData[txField.name];
         }
 
-        // Find wallet address field (if exists)
-        const walletField = formFields.find(f =>
+        const walletField = filteredFormFields.find(f =>
           f.name.toLowerCase().includes('wallet') ||
           f.label.toLowerCase().includes('wallet') ||
           f.name.toLowerCase().includes('address')
@@ -422,8 +468,7 @@ export default function DepositPage() {
       }
 
       if (activeTab === 'auto') {
-        // Find sender number field (if exists)
-        const senderField = formFields.find(f =>
+        const senderField = filteredFormFields.find(f =>
           f.name.toLowerCase().includes('sender') ||
           f.label.toLowerCase().includes('sender') ||
           f.name.toLowerCase().includes('phone') ||
@@ -433,8 +478,7 @@ export default function DepositPage() {
           requestData.senderNumber = formData[senderField.name];
         }
 
-        // Find transaction ID field (if exists)
-        const txField = formFields.find(f =>
+        const txField = filteredFormFields.find(f =>
           f.name.toLowerCase().includes('transaction') ||
           f.label.toLowerCase().includes('transaction') ||
           f.name.toLowerCase().includes('tx')
@@ -452,10 +496,13 @@ export default function DepositPage() {
         setSubmittedRequest(response.data);
         setShowSuccessModal(true);
 
-        // Reset form
         const initialData: Record<string, string> = {};
-        formFields.forEach((field: FormField) => {
-          initialData[field.name] = '';
+        allFormFields.forEach((field: FormField) => {
+          if (field.type === 'static' && field.staticValue) {
+            initialData[field.name] = field.staticValue;
+          } else {
+            initialData[field.name] = '';
+          }
         });
         setFormData(initialData);
         setSelectedPromotion(null);
@@ -475,11 +522,11 @@ export default function DepositPage() {
     }
   };
 
-  // Get appropriate icon for field type
   const getFieldIcon = (field: FormField) => {
     if (field.isBonusField) return <Star className="w-4 h-4 text-yellow-500" />;
     if (field.type === 'number') return <Hash className="w-4 h-4 text-gray-400" />;
     if (field.type === 'textarea') return <FileText className="w-4 h-4 text-gray-400" />;
+    if (field.type === 'static') return <FileText className="w-4 h-4 text-blue-400" />;
     if (field.name.toLowerCase().includes('phone') || field.name.toLowerCase().includes('sender'))
       return <Phone className="w-4 h-4 text-gray-400" />;
     if (field.name.toLowerCase().includes('name'))
@@ -489,7 +536,6 @@ export default function DepositPage() {
     return <FileText className="w-4 h-4 text-gray-400" />;
   };
 
-  // Get icon for payment method
   const getMethodIcon = (method: PaymentMethod) => {
     if (method.icon) {
       return <img src={method.icon} alt={method.name} className="w-full h-full object-contain" />;
@@ -497,7 +543,6 @@ export default function DepositPage() {
     return <span className="text-xs font-bold text-black">{method.name.slice(0, 2).toUpperCase()}</span>;
   };
 
-  // Format bonus display
   const formatBonus = (promotion: Promotion) => {
     if (promotion.type === 'PERCENT') {
       return `${promotion.value}%`;
@@ -506,7 +551,6 @@ export default function DepositPage() {
     }
   };
 
-  // Get gradient color based on promotion name
   const getPromoGradient = (index: number) => {
     const gradients = [
       'from-purple-600 to-pink-600',
@@ -522,7 +566,9 @@ export default function DepositPage() {
     return (
       <div className="min-h-screen bg-[#1E1D2A] text-white pb-10">
         <div className="relative h-16 flex items-center justify-between px-4 border-b border-gray-800">
-          <BackButton />
+      <Suspense fallback={<div>Loading...</div>}>
+      <BackButton />
+    </Suspense>
           <h1 className="text-xl font-bold flex-1 text-center">Deposit</h1>
           <button className="w-10 h-10 rounded-full bg-black/30 flex items-center justify-center">
             <AlertCircle className="w-5 h-5" />
@@ -539,7 +585,9 @@ export default function DepositPage() {
     <div className="min-h-screen bg-[#1E1D2A] text-white pb-10">
       {/* Header */}
       <div className="relative h-16 flex items-center justify-between px-4 border-b border-gray-800">
-        <BackButton />
+     <Suspense fallback={<div>Loading...</div>}>
+      <BackButton />
+    </Suspense>
         <h1 className="text-xl font-bold flex-1 text-center">Deposit</h1>
         <button
           onClick={() => router.push("/history")}
@@ -555,33 +603,37 @@ export default function DepositPage() {
         <div className="grid grid-cols-3 gap-2">
           <button
             onClick={() => handleTabChange("manual")}
-            className={`py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === "manual"
+            className={`py-2 text-sm font-semibold rounded-lg transition-all ${
+              activeTab === "manual"
                 ? "bg-gradient-to-r from-red-600 to-red-500 text-white shadow-md"
                 : "bg-[#0689ff] text-white border border-white"
-              }`}
+            }`}
           >
             BDT - Manual
           </button>
           <button
             onClick={() => handleTabChange("auto")}
-            className={`py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === "auto"
+            className={`py-2 text-sm font-semibold rounded-lg transition-all ${
+              activeTab === "auto"
                 ? "bg-gradient-to-r from-red-600 to-red-500 text-white shadow-md"
                 : "bg-[#0689ff] text-white border border-white"
-              }`}
+            }`}
           >
             Auto Deposit
           </button>
           <button
             onClick={() => handleTabChange("crypto")}
-            className={`py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === "crypto"
+            className={`py-2 text-sm font-semibold rounded-lg transition-all ${
+              activeTab === "crypto"
                 ? "bg-gradient-to-r from-red-600 to-red-500 text-white shadow-md"
                 : "bg-[#0689ff] text-white border border-white"
-              }`}
+            }`}
           >
             Crypto Deposit
           </button>
         </div>
       </div>
+
 
       {/* Selected Promotion Banner */}
       {selectedPromotion && (
@@ -624,7 +676,7 @@ export default function DepositPage() {
               </div>
               <Sparkles className="w-4 h-4 text-yellow-400" />
             </div>
-
+            
             <div className="grid grid-cols-1 gap-3">
               {promotions.filter(p => p.isActive).map((promo, index) => (
                 <div
@@ -674,6 +726,18 @@ export default function DepositPage() {
         </div>
       )}
 
+      {/* Bonus Field Info */}
+      {bonusField && (
+        <div className="px-4 mt-2 mb-4">
+          <div className="bg-yellow-600/10 border border-yellow-600/30 rounded-xl p-2 flex items-center gap-2">
+            <Star className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+            <p className="text-xs text-yellow-400">
+              <span className="font-bold">Bonus Field:</span> The "{bonusField.label}" field will be used for bonus calculations.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Tab Content */}
       <div className="max-w-md mx-auto px-4 mt-4">
         {/* Manual Tab */}
@@ -686,10 +750,11 @@ export default function DepositPage() {
                   <div
                     key={method._id}
                     onClick={() => setSelectedMethod(method)}
-                    className={`bg-white rounded-xl p-2 h-14 flex items-center justify-center text-black border-2 cursor-pointer transition-all ${selectedMethod?._id === method._id
+                    className={`bg-white rounded-xl p-2 h-14 flex items-center justify-center text-black border-2 cursor-pointer transition-all ${
+                      selectedMethod?._id === method._id
                         ? 'border-green-500 scale-105 shadow-lg'
                         : 'border-transparent hover:border-green-300'
-                      }`}
+                    }`}
                   >
                     <div className="w-full h-full flex items-center justify-center">
                       {getMethodIcon(method)}
@@ -717,93 +782,144 @@ export default function DepositPage() {
 
             {/* Dynamic Form Fields */}
             <div className="space-y-4">
-              {formFields
-                .sort((a, b) => a.order - b.order)
-                .map((field) => (
-                  <div key={field._id}>
-                    {field.type === 'screenshot' ? (
-                      <div className="relative">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleFileUpload(e, field.name)}
-                          className="hidden"
-                          id={`screenshot-${field._id}`}
-                        />
-                        <label
-                          htmlFor={`screenshot-${field._id}`}
-                          className={`block w-full rounded-xl px-4 py-3 text-center cursor-pointer transition font-medium ${formData[field.name]
-                              ? 'bg-green-600 text-white'
-                              : uploadStatus === 'error'
+              {filteredFormFields.length > 0 ? (
+                filteredFormFields
+                  .sort((a, b) => a.order - b.order)
+                  .map((field) => (
+                    <div key={field._id}>
+                      {field.type === 'static' ? (
+                        // Static Field Display
+                        <div className="bg-gray-700/50 rounded-xl p-3 border border-gray-600">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center">
+                                <FileText className="w-4 h-4 text-blue-400" />
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-300">{field.label}</p>
+                                <p className="text-lg font-semibold text-white">{field.staticValue}</p>
+                              </div>
+                            </div>
+                            {field.isCopyable && (
+                              <button
+                                type="button"
+                                onClick={() => copyToClipboard(field.staticValue || '', field._id)}
+                                className="p-2 hover:bg-gray-600 rounded-lg transition-colors"
+                              >
+                                {copiedField === field._id ? (
+                                  <Check className="w-5 h-5 text-green-400" />
+                                ) : (
+                                  <Copy className="w-5 h-5 text-gray-400" />
+                                )}
+                              </button>
+                            )}
+                          </div>
+                          {field.isBonusField && (
+                            <div className="mt-2 pt-2 border-t border-gray-600">
+                              <span className="text-xs bg-yellow-600/20 text-yellow-400 px-2 py-1 rounded-full flex items-center gap-1 w-fit">
+                                <Star className="w-3 h-3" />
+                                Bonus Field
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      ) : field.type === 'screenshot' ? (
+                        // Screenshot Field
+                        <div className="relative">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleFileUpload(e, field.name)}
+                            className="hidden"
+                            id={`screenshot-${field._id}`}
+                          />
+                          <label
+                            htmlFor={`screenshot-${field._id}`}
+                            className={`block w-full rounded-xl px-4 py-3 text-center cursor-pointer transition font-medium ${
+                              formData[field.name] 
+                                ? 'bg-green-600 text-white' 
+                                : uploadStatus === 'error'
                                 ? 'bg-red-600 text-white'
                                 : 'bg-white text-black hover:brightness-110'
                             }`}
-                        >
-                          {uploadStatus === 'uploading' ? 'Uploading...' :
-                            formData[field.name] ? 'Upload Successful!' :
-                              uploadStatus === 'error' ? 'Upload Failed. Try Again.' :
-                                field.label}
-                        </label>
-                        {formData[field.name] && (
-                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                            <CheckCircle className="w-5 h-5 text-white" />
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="relative">
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                          {getFieldIcon(field)}
+                          >
+                            {uploadStatus === 'uploading' ? 'Uploading...' : 
+                             formData[field.name] ? 'Upload Successful!' :
+                             uploadStatus === 'error' ? 'Upload Failed. Try Again.' :
+                             field.label}
+                          </label>
+                          {formData[field.name] && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                              <CheckCircle className="w-5 h-5 text-white" />
+                            </div>
+                          )}
+                          {field.isBonusField && (
+                            <div className="absolute -top-3 right-0">
+                              <span className="text-xs bg-yellow-600 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <Star className="w-3 h-3" />
+                                Bonus
+                              </span>
+                            </div>
+                          )}
                         </div>
-                        <input
-                          type={field.type}
-                          value={formData[field.name] || ''}
-                          onChange={(e) => handleInputChange(field.name, e.target.value)}
-                          placeholder={
-                            field.name === amountFieldName && minDepositAmount
-                              ? `Min: ৳${minDepositAmount} - ${field.placeholder || field.label}`
-                              : field.placeholder || `Enter ${field.label}`
-                          }
-                          required={field.required}
-                          min={field.name === amountFieldName && minDepositAmount ? minDepositAmount : undefined}
-                          className={`w-full bg-white border-0 rounded-xl pl-10 pr-4 py-3 text-black text-center text-lg placeholder-black focus:outline-none focus:ring-2 ${amountError && field.name === amountFieldName ? 'focus:ring-red-400 border-2 border-red-400' : 'focus:ring-green-400'
+                      ) : (
+                        // Regular Input Field
+                        <div className="relative">
+                          <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                            {getFieldIcon(field)}
+                          </div>
+                          <input
+                            type={field.type}
+                            value={formData[field.name] || ''}
+                            onChange={(e) => handleInputChange(field.name, e.target.value)}
+                            placeholder={
+                              field.name === amountFieldName && minDepositAmount
+                                ? `Min: ৳${minDepositAmount} - ${field.placeholder || field.label}`
+                                : field.placeholder || `Enter ${field.label}`
+                            }
+                            required={field.required}
+                            min={field.name === amountFieldName && minDepositAmount ? minDepositAmount : undefined}
+                            className={`w-full bg-white border-0 rounded-xl pl-10 pr-4 py-3 text-black text-center text-lg placeholder-black focus:outline-none focus:ring-2 ${
+                              amountError && field.name === amountFieldName ? 'focus:ring-red-400 border-2 border-red-400' : 'focus:ring-green-400'
                             }`}
-                        />
-                        {/* Bonus indicator for amount field */}
-                        {field.name === amountFieldName && calculatedBonus && (
-                          <div className="absolute -bottom-6 left-0 right-0 text-center">
-                            <span className="text-xs text-green-400 bg-green-900/30 px-2 py-1 rounded-full">
-                              + ৳{calculatedBonus.toFixed(2)} bonus will be added
-                            </span>
-                          </div>
-                        )}
-                        {/* Error message for amount field */}
-                        {field.name === amountFieldName && amountError && (
-                          <div className="absolute -bottom-6 left-0 right-0 text-center">
-                            <span className="text-xs text-red-400 bg-red-900/30 px-2 py-1 rounded-full">
-                              {amountError}
-                            </span>
-                          </div>
-                        )}
-                        {/* Bonus field indicator */}
-                        {field.isBonusField && (
-                          <div className="absolute -top-3 right-0">
-                            <span className="text-xs bg-yellow-600 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
-                              <Star className="w-3 h-3" />
-                              Bonus
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                          />
+                          {field.name === amountFieldName && calculatedBonus && (
+                            <div className="absolute -bottom-6 left-0 right-0 text-center">
+                              <span className="text-xs text-green-400 bg-green-900/30 px-2 py-1 rounded-full">
+                                + ৳{calculatedBonus.toFixed(2)} bonus will be added
+                              </span>
+                            </div>
+                          )}
+                          {field.name === amountFieldName && amountError && (
+                            <div className="absolute -bottom-6 left-0 right-0 text-center">
+                              <span className="text-xs text-red-400 bg-red-900/30 px-2 py-1 rounded-full">
+                                {amountError}
+                              </span>
+                            </div>
+                          )}
+                          {field.isBonusField && (
+                            <div className="absolute -top-3 right-0">
+                              <span className="text-xs bg-yellow-600 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <Star className="w-3 h-3" />
+                                Bonus
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))
+              ) : (
+                <div className="text-center py-8 bg-gray-800/50 rounded-lg">
+                  <p className="text-gray-400">No form fields available</p>
+                </div>
+              )}
 
               {/* Submit Button */}
               <div className="pt-4">
                 <button
                   type="submit"
-                  disabled={submitting || (selectedPromotion && !!amountError)}
+                  disabled={submitting || (selectedPromotion && !!amountError) || filteredFormFields.length === 0}
                   className="block mx-auto py-3 px-8 bg-gradient-to-r from-red-600 to-pink-600 text-white font-bold text-base rounded-xl hover:brightness-110 transition shadow-lg disabled:opacity-50"
                 >
                   {submitting ? 'Processing...' : 'Deposit Now'}
@@ -824,7 +940,7 @@ export default function DepositPage() {
             <div className="mb-6">
               <div className="bg-green-900/30 border border-green-800/50 rounded-lg p-3 mb-5 text-xs">
                 <p className="text-green-300 font-medium">
-                  {tittle?.title}
+                  গাড়ি পেমেন্ট করতে হলে ২.০% চার্জ লাগবে এবং বিকাশ/নগদ/রকেট থেকে পেমেন্ট করুন
                 </p>
               </div>
 
@@ -832,13 +948,14 @@ export default function DepositPage() {
               {paymentMethods.length > 0 && (
                 <div className="flex justify-center gap-4 mb-4">
                   {paymentMethods.map((method) => (
-                    <div
-                      key={method._id}
+                    <div 
+                      key={method._id} 
                       onClick={() => setSelectedMethod(method)}
-                      className={`w-24 h-24 rounded-full flex items-center justify-center p-1 cursor-pointer transition-all ${selectedMethod?._id === method._id
+                      className={`w-24 h-24 rounded-full flex items-center justify-center p-1 cursor-pointer transition-all ${
+                        selectedMethod?._id === method._id
                           ? 'bg-gradient-to-r from-green-500 to-green-600 scale-105'
                           : 'bg-white/10 hover:bg-white/20'
-                        }`}
+                      }`}
                     >
                       <div className="w-full h-full bg-white rounded-full flex items-center justify-center p-2">
                         {method.icon ? (
@@ -876,52 +993,100 @@ export default function DepositPage() {
 
             {/* Dynamic Form Fields */}
             <div className="space-y-4">
-              {formFields
-                .sort((a, b) => a.order - b.order)
-                .map((field) => (
-                  <div key={field._id} className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                      {getFieldIcon(field)}
+              {filteredFormFields.length > 0 ? (
+                filteredFormFields
+                  .sort((a, b) => a.order - b.order)
+                  .map((field) => (
+                    <div key={field._id}>
+                      {field.type === 'static' ? (
+                        // Static Field Display for Auto Tab
+                        <div className="bg-gray-700/50 rounded-xl p-3 border border-gray-600">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center">
+                                <FileText className="w-4 h-4 text-blue-400" />
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-300">{field.label}</p>
+                                <p className="text-lg font-semibold text-white">{field.staticValue}</p>
+                              </div>
+                            </div>
+                            {field.isCopyable && (
+                              <button
+                                type="button"
+                                onClick={() => copyToClipboard(field.staticValue || '', field._id)}
+                                className="p-2 hover:bg-gray-600 rounded-lg transition-colors"
+                              >
+                                {copiedField === field._id ? (
+                                  <Check className="w-5 h-5 text-green-400" />
+                                ) : (
+                                  <Copy className="w-5 h-5 text-gray-400" />
+                                )}
+                              </button>
+                            )}
+                          </div>
+                          {field.isBonusField && (
+                            <div className="mt-2 pt-2 border-t border-gray-600">
+                              <span className="text-xs bg-yellow-600/20 text-yellow-400 px-2 py-1 rounded-full flex items-center gap-1 w-fit">
+                                <Star className="w-3 h-3" />
+                                Bonus Field
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        // Regular Input Field
+                        <div className="relative">
+                          <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                            {getFieldIcon(field)}
+                          </div>
+                          <input
+                            type={field.type}
+                            value={formData[field.name] || ''}
+                            onChange={(e) => handleInputChange(field.name, e.target.value)}
+                            placeholder={
+                              field.name === amountFieldName && minDepositAmount
+                                ? `Min: ৳${minDepositAmount} - ${field.placeholder || field.label}`
+                                : field.placeholder || `Enter ${field.label}`
+                            }
+                            required={field.required}
+                            min={field.name === amountFieldName && minDepositAmount ? minDepositAmount : undefined}
+                            className={`w-full bg-[#fdfde8] border-0 rounded-xl pl-10 pr-4 py-4 text-black text-center text-xl placeholder-black border-2 ${
+                              amountError && field.name === amountFieldName ? 'border-red-400' : 'border-[#d12d4d]'
+                            } focus:outline-none focus:ring-2 focus:ring-red-400`}
+                          />
+                          {field.name === amountFieldName && calculatedBonus && (
+                            <div className="absolute -bottom-5 left-0 right-0 text-center">
+                              <span className="text-xs text-green-400">+ ৳{calculatedBonus.toFixed(2)} bonus</span>
+                            </div>
+                          )}
+                          {field.name === amountFieldName && amountError && (
+                            <div className="absolute -bottom-5 left-0 right-0 text-center">
+                              <span className="text-xs text-red-400">{amountError}</span>
+                            </div>
+                          )}
+                          {field.isBonusField && (
+                            <div className="absolute -top-3 right-0">
+                              <span className="text-xs bg-yellow-600 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <Star className="w-3 h-3" />
+                                Bonus
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <input
-                      type={field.type}
-                      value={formData[field.name] || ''}
-                      onChange={(e) => handleInputChange(field.name, e.target.value)}
-                      placeholder={
-                        field.name === amountFieldName && minDepositAmount
-                          ? `Min: ৳${minDepositAmount} - ${field.placeholder || field.label}`
-                          : field.placeholder || `Enter ${field.label}`
-                      }
-                      required={field.required}
-                      min={field.name === amountFieldName && minDepositAmount ? minDepositAmount : undefined}
-                      className={`w-full bg-[#fdfde8] border-0 rounded-xl pl-10 pr-4 py-4 text-black text-center text-xl placeholder-black border-2 ${amountError && field.name === amountFieldName ? 'border-red-400' : 'border-[#d12d4d]'
-                        } focus:outline-none focus:ring-2 focus:ring-red-400`}
-                    />
-                    {field.name === amountFieldName && calculatedBonus && (
-                      <div className="absolute -bottom-5 left-0 right-0 text-center">
-                        <span className="text-xs text-green-400">+ ৳{calculatedBonus.toFixed(2)} bonus</span>
-                      </div>
-                    )}
-                    {field.name === amountFieldName && amountError && (
-                      <div className="absolute -bottom-5 left-0 right-0 text-center">
-                        <span className="text-xs text-red-400">{amountError}</span>
-                      </div>
-                    )}
-                    {field.isBonusField && (
-                      <div className="absolute -top-3 right-0">
-                        <span className="text-xs bg-yellow-600 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <Star className="w-3 h-3" />
-                          Bonus
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  ))
+              ) : (
+                <div className="text-center py-8 bg-gray-800/50 rounded-lg">
+                  <p className="text-gray-400">No form fields available</p>
+                </div>
+              )}
 
               <div className="pt-4">
                 <button
                   type="submit"
-                  disabled={submitting || (selectedPromotion && !!amountError)}
+                  disabled={submitting || (selectedPromotion && !!amountError) || filteredFormFields.length === 0}
                   className="block mx-auto py-3 px-8 bg-gradient-to-r from-red-600 to-pink-600 text-white font-bold text-base rounded-xl hover:brightness-110 transition shadow-lg disabled:opacity-50"
                 >
                   {submitting ? 'Processing...' : 'Deposit Now'}
@@ -946,13 +1111,14 @@ export default function DepositPage() {
             {/* Network Selection */}
             <div className="grid grid-cols-2 gap-3 mb-5">
               {paymentMethods.map((method) => (
-                <div
-                  key={method._id}
+                <div 
+                  key={method._id} 
                   onClick={() => setSelectedMethod(method)}
-                  className={`bg-white rounded-xl p-3 border-2 cursor-pointer transition-all ${selectedMethod?._id === method._id
+                  className={`bg-white rounded-xl p-3 border-2 cursor-pointer transition-all ${
+                    selectedMethod?._id === method._id
                       ? 'border-green-500 scale-105 shadow-lg'
                       : 'border-gray-700 hover:border-green-300'
-                    }`}
+                  }`}
                 >
                   <div className="flex items-center gap-2 mb-2">
                     {method.icon ? (
@@ -1005,23 +1171,158 @@ export default function DepositPage() {
 
             {/* Dynamic Form Fields */}
             <div className="space-y-4 mt-5">
-              {formFields
-                .sort((a, b) => a.order - b.order)
-                .map((field) => {
-                  if (field.type === 'textarea') {
+              {filteredFormFields.length > 0 ? (
+                filteredFormFields
+                  .sort((a, b) => a.order - b.order)
+                  .map((field) => {
+                    if (field.type === 'textarea') {
+                      return (
+                        <div key={field._id} className="relative">
+                          <div className="absolute left-3 top-3">
+                            {getFieldIcon(field)}
+                          </div>
+                          <textarea
+                            value={formData[field.name] || ''}
+                            onChange={(e) => handleInputChange(field.name, e.target.value)}
+                            placeholder={field.placeholder || `Enter ${field.label}`}
+                            rows={2}
+                            required={field.required}
+                            className="w-full bg-gradient-to-r from-red-500 to-red-600 border-0 rounded-xl pl-10 pr-4 py-3 text-white text-center border-2 border-[#fc0613] placeholder-white/80"
+                          />
+                          {field.isBonusField && (
+                            <div className="absolute -top-3 right-0">
+                              <span className="text-xs bg-yellow-600 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <Star className="w-3 h-3" />
+                                Bonus
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    if (field.type === 'static') {
+                      return (
+                        <div key={field._id} className="bg-gray-700/50 rounded-xl p-3 border border-gray-600">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center">
+                                <FileText className="w-4 h-4 text-blue-400" />
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-300">{field.label}</p>
+                                <p className="text-lg font-semibold text-white">{field.staticValue}</p>
+                              </div>
+                            </div>
+                            {field.isCopyable && (
+                              <button
+                                type="button"
+                                onClick={() => copyToClipboard(field.staticValue || '', field._id)}
+                                className="p-2 hover:bg-gray-600 rounded-lg transition-colors"
+                              >
+                                {copiedField === field._id ? (
+                                  <Check className="w-5 h-5 text-green-400" />
+                                ) : (
+                                  <Copy className="w-5 h-5 text-gray-400" />
+                                )}
+                              </button>
+                            )}
+                          </div>
+                          {field.isBonusField && (
+                            <div className="mt-2 pt-2 border-t border-gray-600">
+                              <span className="text-xs bg-yellow-600/20 text-yellow-400 px-2 py-1 rounded-full flex items-center gap-1 w-fit">
+                                <Star className="w-3 h-3" />
+                                Bonus Field
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    if (field.type === 'screenshot' || field.label.toLowerCase().includes('screenshot')) {
+                      return (
+                        <div key={field._id}>
+                          <div className="relative">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleFileUpload(e, field.name)}
+                              className="hidden"
+                              id={`screenshot-${field._id}`}
+                            />
+                            <label
+                              htmlFor={`screenshot-${field._id}`}
+                              className={`flex items-center justify-center w-full rounded-xl overflow-hidden cursor-pointer transition shadow-md relative
+                                ${formData[field.name] ? 'bg-green-500' :
+                                  uploadStatus === 'error' ? 'bg-red-500' :
+                                    'bg-white border border-gray-300'}`}
+                            >
+                              <div className="flex-1 text-center py-3">
+                                {uploadStatus === 'uploading' && (
+                                  <span className="text-gray-700 font-semibold">Uploading...</span>
+                                )}
+                                {formData[field.name] && (
+                                  <span className="text-white font-semibold">Upload successful!</span>
+                                )}
+                                {!formData[field.name] && uploadStatus !== 'uploading' && uploadStatus !== 'error' && (
+                                  <span className="text-gray-800 font-semibold">{field.label}</span>
+                                )}
+                                {uploadStatus === 'error' && (
+                                  <span className="text-white font-semibold">Upload failed. Try again.</span>
+                                )}
+                              </div>
+                              <div className={`absolute right-3 px-3 py-2 rounded-lg
+                                ${formData[field.name] ? 'bg-green-600' :
+                                  uploadStatus === 'error' ? 'bg-red-600' :
+                                    'bg-pink-500 hover:bg-pink-600'}`}
+                              >
+                                <Upload className="w-5 h-5 text-white" />
+                              </div>
+                            </label>
+                            {field.isBonusField && (
+                              <div className="absolute -top-3 right-0">
+                                <span className="text-xs bg-yellow-600 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
+                                  <Star className="w-3 h-3" />
+                                  Bonus
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }
+
                     return (
                       <div key={field._id} className="relative">
-                        <div className="absolute left-3 top-3">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2">
                           {getFieldIcon(field)}
                         </div>
-                        <textarea
+                        <input
+                          type={field.type}
                           value={formData[field.name] || ''}
                           onChange={(e) => handleInputChange(field.name, e.target.value)}
-                          placeholder={field.placeholder || `Enter ${field.label}`}
-                          rows={2}
+                          placeholder={
+                            field.name === amountFieldName && minDepositAmount
+                              ? `Min: ৳${minDepositAmount} - ${field.placeholder || field.label}`
+                              : field.placeholder || `Enter ${field.label}`
+                          }
                           required={field.required}
-                          className="w-full bg-gradient-to-r from-red-500 to-red-600 border-0 rounded-xl pl-10 pr-4 py-3 text-white text-center border-2 border-[#fc0613] placeholder-white/80"
+                          min={field.name === amountFieldName && minDepositAmount ? minDepositAmount : undefined}
+                          className={`w-full bg-[#fdfde8] border-0 rounded-xl pl-10 pr-4 py-3 text-black border-2 ${
+                            amountError && field.name === amountFieldName ? 'border-red-400' : 'border-[#fc0613]'
+                          } text-center placeholder-black focus:outline-none focus:ring-2 focus:ring-red-400`}
                         />
+                        {field.name === amountFieldName && calculatedBonus && (
+                          <div className="absolute -bottom-5 left-0 right-0 text-center">
+                            <span className="text-xs text-green-400">+ ৳{calculatedBonus.toFixed(2)} bonus</span>
+                          </div>
+                        )}
+                        {field.name === amountFieldName && amountError && (
+                          <div className="absolute -bottom-5 left-0 right-0 text-center">
+                            <span className="text-xs text-red-400">{amountError}</span>
+                          </div>
+                        )}
                         {field.isBonusField && (
                           <div className="absolute -top-3 right-0">
                             <span className="text-xs bg-yellow-600 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -1032,106 +1333,17 @@ export default function DepositPage() {
                         )}
                       </div>
                     );
-                  }
-
-                  if (field.type === 'screenshot' || field.label.toLowerCase().includes('screenshot')) {
-                    return (
-                      <div key={field._id}>
-                        <div className="relative">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleFileUpload(e, field.name)}
-                            className="hidden"
-                            id={`screenshot-${field._id}`}
-                          />
-                          <label
-                            htmlFor={`screenshot-${field._id}`}
-                            className={`flex items-center justify-center w-full rounded-xl overflow-hidden cursor-pointer transition shadow-md relative
-                              ${formData[field.name] ? 'bg-green-500' :
-                                uploadStatus === 'error' ? 'bg-red-500' :
-                                  'bg-white border border-gray-300'}`}
-                          >
-                            <div className="flex-1 text-center py-3">
-                              {uploadStatus === 'uploading' && (
-                                <span className="text-gray-700 font-semibold">Uploading...</span>
-                              )}
-                              {formData[field.name] && (
-                                <span className="text-white font-semibold">Upload successful!</span>
-                              )}
-                              {!formData[field.name] && uploadStatus !== 'uploading' && uploadStatus !== 'error' && (
-                                <span className="text-gray-800 font-semibold">{field.label}</span>
-                              )}
-                              {uploadStatus === 'error' && (
-                                <span className="text-white font-semibold">Upload failed. Try again.</span>
-                              )}
-                            </div>
-                            <div className={`absolute right-3 px-3 py-2 rounded-lg
-                              ${formData[field.name] ? 'bg-green-600' :
-                                uploadStatus === 'error' ? 'bg-red-600' :
-                                  'bg-pink-500 hover:bg-pink-600'}`}
-                            >
-                              <Upload className="w-5 h-5 text-white" />
-                            </div>
-                          </label>
-                          {field.isBonusField && (
-                            <div className="absolute -top-3 right-0">
-                              <span className="text-xs bg-yellow-600 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
-                                <Star className="w-3 h-3" />
-                                Bonus
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div key={field._id} className="relative">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                        {getFieldIcon(field)}
-                      </div>
-                      <input
-                        type={field.type}
-                        value={formData[field.name] || ''}
-                        onChange={(e) => handleInputChange(field.name, e.target.value)}
-                        placeholder={
-                          field.name === amountFieldName && minDepositAmount
-                            ? `Min: ৳${minDepositAmount} - ${field.placeholder || field.label}`
-                            : field.placeholder || `Enter ${field.label}`
-                        }
-                        required={field.required}
-                        min={field.name === amountFieldName && minDepositAmount ? minDepositAmount : undefined}
-                        className={`w-full bg-[#fdfde8] border-0 rounded-xl pl-10 pr-4 py-3 text-black border-2 ${amountError && field.name === amountFieldName ? 'border-red-400' : 'border-[#fc0613]'
-                          } text-center placeholder-black focus:outline-none focus:ring-2 focus:ring-red-400`}
-                      />
-                      {field.name === amountFieldName && calculatedBonus && (
-                        <div className="absolute -bottom-5 left-0 right-0 text-center">
-                          <span className="text-xs text-green-400">+ ৳{calculatedBonus.toFixed(2)} bonus</span>
-                        </div>
-                      )}
-                      {field.name === amountFieldName && amountError && (
-                        <div className="absolute -bottom-5 left-0 right-0 text-center">
-                          <span className="text-xs text-red-400">{amountError}</span>
-                        </div>
-                      )}
-                      {field.isBonusField && (
-                        <div className="absolute -top-3 right-0">
-                          <span className="text-xs bg-yellow-600 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
-                            <Star className="w-3 h-3" />
-                            Bonus
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                  })
+              ) : (
+                <div className="text-center py-8 bg-gray-800/50 rounded-lg">
+                  <p className="text-gray-400">No form fields available</p>
+                </div>
+              )}
 
               <div className="pt-4">
                 <button
                   type="submit"
-                  disabled={submitting || (selectedPromotion && !!amountError)}
+                  disabled={submitting || (selectedPromotion && !!amountError) || filteredFormFields.length === 0}
                   className="block mx-auto py-3 px-8 bg-gradient-to-r from-red-600 to-pink-600 text-white font-bold text-base rounded-xl hover:brightness-110 transition shadow-lg disabled:opacity-50"
                 >
                   {submitting ? 'Processing...' : 'Deposit Now'}
